@@ -1,0 +1,18 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:14
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5454:5432"
+    volumes:
+      - ./database/data:/var/lib/postgresql/data
+      - ./database/schema.sql:/tmp/schema.sql
+  redis:
+    image: redis:5
+    restart: unless-stopped
+    ports:
+      - "6379:6379"

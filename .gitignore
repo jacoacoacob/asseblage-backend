@@ -1,0 +1,9 @@
+.env
+
+.vscode
+.DS_Store
+
+dist
+node_modules
+
+database/data

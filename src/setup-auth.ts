@@ -44,11 +44,14 @@ function setupAuth(app: Express, { io, ioAuthenticated }: IOServer) {
         res.json({ hello: "you", user: req.user });
     })
 
-    app.post("/api/login", passport.authenticate("local"));
+    // app.post("/api/login", passport.authenticate("local"));
 
     app.post("/api/logout", (req, res) => {
         req.logout(() => void 0);
-        res.cookie("connect.sid", "", { expires: new Date(), sameSite: true });
+        res.cookie("connect.sid", "", {
+            expires: new Date(),
+            sameSite: true
+        });
         req.session.destroy(() => void 0);
         res.redirect("/");
     });
@@ -70,8 +73,6 @@ function setupAuth(app: Express, { io, ioAuthenticated }: IOServer) {
             next(new Error("Unauthorized"));
         }
     });
-
-
 }
 
 export { setupAuth };

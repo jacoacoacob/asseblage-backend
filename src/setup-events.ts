@@ -1,12 +1,17 @@
 import { Server, Socket } from "socket.io";
+import { IOServer } from "./io-server";
 
+function setupEvents({ io, ioAuthenticated }: IOServer) {
 
-function onConnection(socket: Socket) {
+    io.on("connection", (socket) => {
+        console.log("[nsBase] onConnection", socket.request.sessionID);
+        socket.emit("hello", socket.request.user?.username ?? "");
+    });
     
+    ioAuthenticated.on("connection", (socket) => {
+        console.log("[nsAuthenticated] onConnection");
+        socket.emit("hello", socket.request.user?.username ?? "");
+    });
 }
 
-function setupSockets(io: Server) {
-    io.on("connection", onConnection);
-}
-
-export { setupSockets };
+export { setupEvents };

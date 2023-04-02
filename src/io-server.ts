@@ -3,6 +3,7 @@ import { Namespace, Server } from "socket.io";
 
 interface ServerToClientEvents {
     noArg: () => void;
+    hello: (name: string) => void;
     basicEmit: (a: number, b: string, c: Buffer) => void;
     withAck: (d: string, callback: (e: number) => void) => void;
 }
@@ -28,8 +29,10 @@ type IO = Server<
 >;
 
 type IOAuthenticated = Namespace<
-    ClientToServerEvents,
     ServerToClientEvents,
+    {
+        hello: (name: string) => void;
+    },
     InterServerEvents,
     SocketData
 >;

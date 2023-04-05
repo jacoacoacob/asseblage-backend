@@ -1,3 +1,4 @@
+import { Socket } from "socket.io";
 
 declare module "http" {
     import { Session } from "express-session";
@@ -6,7 +7,6 @@ declare module "http" {
         session: Session;
     }
 }
-
 
 declare namespace Express {
     export interface User {

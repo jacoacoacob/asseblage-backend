@@ -1,17 +1,24 @@
 -- Clean up existing database objects
 
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS game_link;
+DROP TABLE IF EXISTS game;
 
--- Create database objects
+
+-- Load extensions
 
 CREATE EXTENSION "uuid-ossp";
 
-CREATE TABLE IF NOT EXISTS users (
+
+-- Create database objects
+
+CREATE TABLE IF NOT EXISTS game (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email TEXT UNIQUE NOT NULL,
-    email_verified BOOLEAN DEFAULT FALSE,
-    display_name TEXT,
-    pw_hash TEXT
+    history JSONB
 );
 
-
+CREATE TABLE IF NOT EXISTS game_link (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    game_id UUID REFERENCES game,
+    is_revoked BOOLEAN DEFAULT false,
+    token TEXT 
+);

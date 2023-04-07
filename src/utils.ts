@@ -2,13 +2,13 @@ import * as crypto from "crypto";
 import * as jwt from "jsonwebtoken";
 import type { RequestHandler } from "express";
 
-type EnvVariable = "ALLOWED_ORIGINS" | "JWT_SECRET";
+type EnvVariable = "ALLOWED_ORIGINS" | "JWT_SECRET" | "PORT";
 
-function getEnv(variable: EnvVariable, defaultValue = "") {
+function getEnv<T>(variable: EnvVariable, defaultValue: T) {
     return process.env[variable] ?? defaultValue;
 }
 
-interface Payload {
+interface TokenPayload {
     game_id: string;
     kind: "link" | "auth";
     role: "player" | "super_player";
@@ -17,7 +17,7 @@ interface Payload {
     jti: string;
 }
 
-type CreatePayload = Partial<Payload> & Pick<Payload, "game_id" | "role" | "kind">;
+type CreatePayload = Partial<TokenPayload> & Pick<TokenPayload, "game_id" | "role" | "kind">;
 
 function signJwt(payload: CreatePayload, options?: jwt.SignOptions) {
     return jwt.sign(
@@ -25,7 +25,7 @@ function signJwt(payload: CreatePayload, options?: jwt.SignOptions) {
             jti: crypto.randomUUID(),
             ...payload
         },
-        getEnv("JWT_SECRET"),
+        getEnv("JWT_SECRET", ""),
         options
     );
 }
@@ -33,9 +33,9 @@ function signJwt(payload: CreatePayload, options?: jwt.SignOptions) {
 function verifyJwt(token: string, options?: jwt.VerifyOptions) {
     return jwt.verify(
         token,
-        getEnv("JWT_SECRET"),
+        getEnv("JWT_SECRET", ""),
         options
-    ) as Payload;
+    ) as TokenPayload;
 }
 
 function handler(callback: RequestHandler) {
@@ -50,4 +50,4 @@ function handler(callback: RequestHandler) {
 }
 
 export { getEnv, signJwt, verifyJwt, handler };
-export type { Payload };
+export type { TokenPayload };

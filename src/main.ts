@@ -1,17 +1,19 @@
 import http from "http";
 
-import dotenv from "dotenv";
 import express from "express";
+import { Server } from "socket.io";
 import cors from "cors";
-
-import { createIO } from "./io-server";
-import { setupIO } from "./io-events";
-
-import { api } from "./api/routes";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const PORT = process.env.PORT || 3000;
+import { api } from "./api/routes";
+import { ioSessionMiddleware } from "./io/session-middleware";
+import { getEnv } from "./utils";
+import { onConnection } from "./io/on-connection";
+
+const PORT = getEnv("PORT", 3000);
+const ALLOWED_ORIGINS = getEnv("ALLOWED_ORIGINS", "").split(",");
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -21,11 +23,19 @@ app.use(express.json());
 
 app.use("/api", api);
 
-const io = createIO(httpServer);
+const io = new Server(httpServer, {
+    cors: {
+        origin: ALLOWED_ORIGINS,
+    }
+});
 
 io.engine.use(cors());
 
-setupIO(io);
+io.use(ioSessionMiddleware);
+
+io.on("connection", (socket) => {
+    onConnection(io, socket);
+});
 
 httpServer.listen(PORT, () => {
     console.log("Server listening on port:", PORT);

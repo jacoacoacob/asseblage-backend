@@ -1,14 +1,12 @@
 import { handler, signJwt, verifyJwt } from "../utils";
 
 interface ReqBody {
-    // game_id: string;
     token: string;
 }
 
 function isValidReqBody(data: unknown): data is ReqBody {
     return (
         typeof data !== undefined &&
-        // Object.prototype.hasOwnProperty.call(data, "game_id") &&
         Object.prototype.hasOwnProperty.call(data, "token")
     )
 }
@@ -17,7 +15,7 @@ function isValidReqBody(data: unknown): data is ReqBody {
  * Create a client auth token.
  * 
  */
-const handleCreateClientAuthToken = handler((req, res) => {
+const handleCreateSessionToken = handler((req, res) => {
     if (!isValidReqBody(req.body)) {
         return res.sendStatus(400);
     }
@@ -40,4 +38,4 @@ const handleCreateClientAuthToken = handler((req, res) => {
     return res.sendStatus(400);
 });
 
-export { handleCreateClientAuthToken };
+export { handleCreateSessionToken };

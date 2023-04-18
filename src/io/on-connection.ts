@@ -9,12 +9,22 @@ async function onConnection(io: IOServer, socket: IOServerSocket) {
             role
         }
     } = socket.data as SocketData;
-    
+
+    const session = await sessionStore.findSession({ clientId, gameId });
+
+    const sockets = Array.from(
+        new Set(
+            session?.sockets.filter(Boolean).concat(socket.id) ?? [socket.id]
+        )
+    );
+
     // save session
-    await sessionStore.saveSession(clientId, {
+    await sessionStore.saveSession({
+        clientId,
         gameId,
         role,
-        playerIds: [],
+        sockets,
+        playerIds: session?.playerIds ?? [],
     });
 
     // join game room
@@ -29,7 +39,24 @@ async function onConnection(io: IOServer, socket: IOServerSocket) {
     io.to(`game:${gameId}`).emit("clients", clients);
 
     socket.on("disconnect", async () => {
-        sessionStore.expireSession({ gameId, clientId });
+        const session = await sessionStore.findSession({ gameId, clientId });
+
+        if (session) {
+            console.log("[disconnect] SESSION", session)
+            const indexOfSocketId = session.sockets.indexOf(socket.id);
+            if (indexOfSocketId > -1) {
+                const sockets = session.sockets.filter((_, i) => i !== indexOfSocketId);
+                await sessionStore.saveSession({
+                    ...session,
+                    sockets,
+                });
+                if (sockets.length === 0) {
+                    sessionStore.expireSession({ gameId, clientId });
+                }
+            }
+        } else {
+            sessionStore.expireSession({ gameId, clientId });
+        }
 
         const clients = await sessionStore.listConnectedClientsForGame(gameId);
 

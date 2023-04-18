@@ -1,11 +1,11 @@
 import { Router } from "express";
 
 import { handleCreateGame } from "./handle-create-game";
-import { handleCreateSessionToken } from "./handle-create-session-token";
+import { handleCreateClientToken } from "./handle-create-client-token";
 
 const api = Router();
 
 api.post("/game", handleCreateGame);
-api.post("/game/token", handleCreateSessionToken);
+api.post("/game/client-token", handleCreateClientToken);
 
 export { api };

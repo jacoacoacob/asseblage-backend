@@ -1,53 +1,100 @@
-import { RedisMultiQueuedCommand } from "@redis/client/dist/lib/multi-command";
 import { redisClient } from "./redis-client";
+import type { RedisMultiQueuedCommand } from "@redis/client/dist/lib/multi-command";
+
+const EXPIRE_SESSION_TTL_SECONDS = 3;
+
+// function sessionKey(gameID: string, clientID: string, ) {
+//     return `session:${gameID}__${clientID}`
+// }
 
 interface SessionData {
+    /**
+     * The unique identifier used to associate various database objects
+     * related to a given game.
+     */
+    gameId: string;
+    /**
+     * The unique identifier for a client (a specific browser instance on a 
+     * specific device).
+     */
+    clientId: string;
+    /**
+     * A role endows a client with a set of permissions.
+     */
+    role: string;
+    /** 
+     * Each connected client may represent 1 or more players in a game.
+     */
+    playerIds: string[];
+}
+
+/**
+ * convert session data stored in redis to SessionData interface complant
+ * javascript object
+ */
+function _deserializeSessionData([clientId, gameId, role, playerIds]: string[]): SessionData {
+    return { clientId, gameId, role, playerIds: playerIds.split(",") };
+}
+
+
+interface SessionKey {
     gameId: string;
     clientId: string;
-    role: string;
-    connected: boolean;
+}
+/**
+ * convert session key stored in redis to SessionKey object
+ */
+function _deserializeSessionKey(sessionKey: string): SessionKey {
+    const [gameId, clientId] = sessionKey
+        .slice(sessionKey.indexOf(":"))
+        .split("__");
+    
+    return { gameId, clientId };
 }
 
-const SESSION_TTL = 24 * 60 * 60;
-
-function _deserializeRawSession([clientId, gameId, role, connected]: string[]): SessionData {
-    return { clientId, gameId, role, connected: connected === "true" };
+/**
+ * convert SessionKey object into string to be used as a key in redis
+ */
+function _serializeSessionKey({ gameId, clientId }: SessionKey) {
+    return `session:${gameId}__${clientId}`;
 }
+
+
 
 async function findSession(clientID: string) {
     const session = await redisClient.hmGet(
         `session:${clientID}`,
-        ["clientId", "gameId", "role", "connected"]
+        ["clientId", "gameId", "role", "playerIds"]
     );
-    
-    return _deserializeRawSession(session);
+
+    return _deserializeSessionData(session);
 }
 
-type SaveSessionData = Pick<SessionData, "connected" | "gameId" | "role">;
+type SaveSessionData = Pick<SessionData, "playerIds" | "gameId" | "role">;
 
-async function saveSession(clientID: string, data: SaveSessionData) {
-    const { gameId, role, connected } = data;
+async function saveSession(clientId: string, data: SaveSessionData) {
+    const { gameId, role, playerIds } = data;
 
     const result = await redisClient
         .multi()
-        .hSet(`session:${clientID}`, [
+        .hSet(_serializeSessionKey({ gameId, clientId }), [
             "clientId",
-            clientID,
+            clientId,
             "gameId",
             gameId,
             "role",
             role,
-            "connected",
-            `${connected}`
+            "playerIds",
+            playerIds.join(",")
         ])
-        .expire(`session:${clientID}`, SESSION_TTL)
+        .persist(_serializeSessionKey({ gameId, clientId }))
         .exec();
-    
+
     return result;
 }
 
-async function listAllSessions() {
-    const sessionIDs = new Set<string>();
+async function listConnectedClients() {
+    const clientIDs = new Set<string>();
     let cursor = 0;
 
     do {
@@ -56,27 +103,33 @@ async function listAllSessions() {
             COUNT: 100
         });
         cursor = scanCursor;
-        scanKeys.forEach(sessionIDs.add);
+        scanKeys.forEach((key) => {
+            clientIDs.add(key);
+        });
     } while (cursor !== 0);
 
     const commands: RedisMultiQueuedCommand[] = [];
-    
-    sessionIDs.forEach(sessionID => {
+
+    clientIDs.forEach(sessionID => {
         commands.push({
-            args: ["hmget", sessionID, "clientId", "gameId", "role", "connected"],
+            args: ["hmget", sessionID, "clientId", "gameId", "role", "playerIds"],
         });
     });
 
     const results = await redisClient.multiExecutor(commands);
-    
-    return results.map(session => _deserializeRawSession(session as string[]));    
+
+    return results.map(session => _deserializeSessionData(session as string[]));
 }
 
-async function filterAllSessions(cb: (session: SessionData) => boolean) {
-    const sessions = await listAllSessions();
+async function listConnectedClientsForGame(gameId: string) {
+    const clients = await listConnectedClients();
 
-    return sessions.filter(cb);
+    return clients.filter((client) => client.gameId === gameId);
 }
 
-export { findSession, saveSession, listAllSessions, filterAllSessions };
+async function expireSession(key: SessionKey) {
+    return redisClient.expire(_serializeSessionKey(key), EXPIRE_SESSION_TTL_SECONDS);
+}
+
+export { findSession, expireSession, saveSession, listConnectedClientsForGame };
 export type { SessionData };

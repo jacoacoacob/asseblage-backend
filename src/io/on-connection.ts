@@ -14,7 +14,7 @@ async function onConnection(io: IOServer, socket: IOServerSocket) {
     await sessionStore.saveSession(clientId, {
         gameId,
         role,
-        connected: true
+        playerIds: [],
     });
 
     // join game room
@@ -23,13 +23,18 @@ async function onConnection(io: IOServer, socket: IOServerSocket) {
     // fetch game state from database
     const gameState = {};
 
-    // fetch users in game room
-    const sessions = await sessionStore.filterAllSessions(
-        (session) => session.gameId === gameId 
-    );
+    // find all game players
+    const clients = await sessionStore.listConnectedClientsForGame(gameId);
     
-    io.to(`game:${gameId}`).emit("players", sessions);
+    io.to(`game:${gameId}`).emit("clients", clients);
 
+    socket.on("disconnect", async () => {
+        sessionStore.expireSession({ gameId, clientId });
+
+        const clients = await sessionStore.listConnectedClientsForGame(gameId);
+
+        io.to(`game:${gameId}`).emit("clients", clients);
+    });
 }
 
 export { onConnection };

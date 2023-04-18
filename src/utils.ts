@@ -11,7 +11,7 @@ function getEnv<T>(variable: EnvVariable, defaultValue: T) {
 interface TokenPayload {
     game_id: string;
     kind: "link" | "auth";
-    role: "player" | "super_player";
+    role?: "player" | "super_player";
     iat: number;
     exp: number;
     jti: string;

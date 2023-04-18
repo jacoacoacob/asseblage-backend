@@ -1,5 +1,6 @@
 -- Clean up existing database objects
 
+DROP TABLE IF EXISTS game_player;
 DROP TABLE IF EXISTS game_link;
 DROP TABLE IF EXISTS game;
 
@@ -21,4 +22,11 @@ CREATE TABLE IF NOT EXISTS game_link (
     game_id UUID REFERENCES game,
     is_revoked BOOLEAN DEFAULT false,
     token TEXT 
+);
+
+CREATE TABLE IF NOT EXISTS game_player (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    game_id UUID REFERENCES game,
+    name TEXT,
+    UNIQUE(game_id, name)
 );

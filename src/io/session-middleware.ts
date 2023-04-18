@@ -1,9 +1,10 @@
 import type { IOServerSocket, MiddlewareNext } from "./types";
 import { type TokenPayload, verifyJwt } from "../utils";
+import { expireSession } from "../session-store";
 
 interface AuthPayload {
     gameToken: string;
-    sessionToken?: string;
+    clientToken?: string;
 }
 
 function isAuthPayload(data: unknown): data is AuthPayload {
@@ -11,20 +12,20 @@ function isAuthPayload(data: unknown): data is AuthPayload {
         typeof data !== "undefined" &&
         Object.prototype.hasOwnProperty.call(data, "gameToken")
     ) {
-        const { sessionToken, gameToken } = data as AuthPayload;
+        const { clientToken, gameToken } = data as AuthPayload;
         return (
             ["string", "undefined"].includes(typeof gameToken) &&
-            ["string", "undefined"].includes(typeof sessionToken)
+            ["string", "undefined"].includes(typeof clientToken)
         )
     }
     return false;
 }
 
-function ioSessionMiddleware(socket: IOServerSocket, next: MiddlewareNext) {
+async function ioSessionMiddleware(socket: IOServerSocket, next: MiddlewareNext) {
     if (isAuthPayload(socket.handshake.auth)) {
-        const { sessionToken, gameToken } = socket.handshake.auth;
+        const { clientToken, gameToken } = socket.handshake.auth;
 
-        if (typeof sessionToken === "undefined") {
+        if (typeof clientToken === "undefined") {
             return next(new Error("missing_session_token"));
         }
 
@@ -33,7 +34,7 @@ function ioSessionMiddleware(socket: IOServerSocket, next: MiddlewareNext) {
         }
         
         let gameTokenData: TokenPayload;
-        let sessionTokenData: TokenPayload;
+        let clientTokenData: TokenPayload;
 
         try {
             gameTokenData = verifyJwt(gameToken);
@@ -42,22 +43,24 @@ function ioSessionMiddleware(socket: IOServerSocket, next: MiddlewareNext) {
         }
 
         try {
-            sessionTokenData = verifyJwt(sessionToken);
+            clientTokenData = verifyJwt(clientToken);
         } catch (error) {
             return next(new Error("invalid_session_token"));
         }
         
-        if (
-            sessionTokenData.game_id !== gameTokenData.game_id ||
-            sessionTokenData.role !== gameTokenData.role
-        ) {
+        if (clientTokenData.game_id !== gameTokenData.game_id) {
+            void expireSession({
+                gameId: clientTokenData.game_id,
+                clientId: clientTokenData.jti,
+            });
             return next(new Error("invalid_session_token"));
         }
 
-        const { role, jti, game_id } = sessionTokenData;
+        const { role } = gameTokenData;
+        const { jti, game_id } = clientTokenData;
 
         socket.data.session = {
-            role,
+            role: role!,
             gameId: game_id,
             clientId: jti,
         };

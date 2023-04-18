@@ -10,7 +10,7 @@ interface ClientToServerEvents {
 }
 
 interface ServerToClientEvents {
-    players: (data: SessionData[]) => void;
+    clients: (data: SessionData[]) => void;
 }
 
 interface ServerToServerEvents {}

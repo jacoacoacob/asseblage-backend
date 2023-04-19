@@ -8,7 +8,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { api } from "./api/routes";
-import { ioSessionMiddleware } from "./io/session-middleware";
+import { makeIOSessionMiddleware } from "./io/session-middleware";
 import { getEnv } from "./utils";
 import { onConnection } from "./io/on-connection";
 
@@ -16,6 +16,7 @@ const PORT = getEnv("PORT", 3000);
 const ALLOWED_ORIGINS = getEnv("ALLOWED_ORIGINS", "").split(",");
 
 const app = express();
+
 const httpServer = http.createServer(app);
 
 app.use(cors());
@@ -31,7 +32,7 @@ const io = new Server(httpServer, {
 
 io.engine.use(cors());
 
-io.use(ioSessionMiddleware);
+io.use(makeIOSessionMiddleware(io));
 
 io.on("connection", (socket) => {
     onConnection(io, socket);

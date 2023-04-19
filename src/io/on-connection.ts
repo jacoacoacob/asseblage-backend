@@ -1,31 +1,9 @@
 import * as sessionStore from "../session-store";
+import { createDisconnectHandler } from "./on-disconnect";
 import type { IOServer, IOServerSocket, SocketData } from "./types";
 
 async function onConnection(io: IOServer, socket: IOServerSocket) {
-    const {
-        session: {
-            gameId,
-            clientId,
-            role
-        }
-    } = socket.data as SocketData;
-
-    const session = await sessionStore.findSession({ clientId, gameId });
-
-    const sockets = Array.from(
-        new Set(
-            session?.sockets.filter(Boolean).concat(socket.id) ?? [socket.id]
-        )
-    );
-
-    // save session
-    await sessionStore.saveSession({
-        clientId,
-        gameId,
-        role,
-        sockets,
-        playerIds: session?.playerIds ?? [],
-    });
+    const { clientId, gameId } = socket.data.session!;
 
     // join game room
     socket.join(`game:${gameId}`);
@@ -38,30 +16,33 @@ async function onConnection(io: IOServer, socket: IOServerSocket) {
     
     io.to(`game:${gameId}`).emit("clients", clients);
 
-    socket.on("disconnect", async () => {
-        const session = await sessionStore.findSession({ gameId, clientId });
+    socket.on("disconnect", createDisconnectHandler(io, socket));
 
-        if (session) {
-            console.log("[disconnect] SESSION", session)
-            const indexOfSocketId = session.sockets.indexOf(socket.id);
-            if (indexOfSocketId > -1) {
-                const sockets = session.sockets.filter((_, i) => i !== indexOfSocketId);
-                await sessionStore.saveSession({
-                    ...session,
-                    sockets,
-                });
-                if (sockets.length === 0) {
-                    sessionStore.expireSession({ gameId, clientId });
-                }
-            }
-        } else {
-            sessionStore.expireSession({ gameId, clientId });
-        }
+    // socket.on("disconnect", async (reason) => {
+        
+    //     const session = await sessionStore.findSession({ gameId, clientId });
 
-        const clients = await sessionStore.listConnectedClientsForGame(gameId);
+    //     if (session) {
+    //         console.log("[disconnect] SESSION", session)
+    //         const indexOfSocketId = session.sockets.indexOf(socket.id);
+    //         if (indexOfSocketId > -1) {
+    //             const sockets = session.sockets.filter((_, i) => i !== indexOfSocketId);
+    //             await sessionStore.saveSession({
+    //                 ...session,
+    //                 sockets,
+    //             });
+    //             if (sockets.length === 0) {
+    //                 sessionStore.expireSession({ gameId, clientId });
+    //             }
+    //         }
+    //     } else {
+    //         sessionStore.expireSession({ gameId, clientId });
+    //     }
 
-        io.to(`game:${gameId}`).emit("clients", clients);
-    });
+    //     const clients = await sessionStore.listConnectedClientsForGame(gameId);
+
+    //     io.to(`game:${gameId}`).emit("clients", clients);
+    // });
 }
 
 export { onConnection };

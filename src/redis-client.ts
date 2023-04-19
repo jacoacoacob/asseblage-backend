@@ -2,11 +2,20 @@ import { createClient } from "redis";
 
 const redisClient = createClient({ url: process.env.REDIS_URL });
 
+redisClient.on("error", (error) => {
+    console.log("[redisClient] onError", error);
+});
+
 redisClient.connect().catch(console.error);
+
 
 redisClient.configSet("notify-keyspace-events", "Ex");
 
 const subscriber = redisClient.duplicate();
+
+subscriber.on("error", (error) => {
+    console.log("[redisClient::Subscriber] onError", error);
+});
 
 subscriber.connect().catch(console.error);
 
@@ -18,7 +27,7 @@ subscriber.subscribe("__keyevent@0__:expired", (key) => {
 });
 
 function onExpired(cb: (message: string) => void) {
-    listeners.push(cb);
+    listeners.push(cb);   
 }
 
 function offExpired(cb: (message: string) => void) {

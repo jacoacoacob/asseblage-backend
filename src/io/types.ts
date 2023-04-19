@@ -16,11 +16,7 @@ interface ServerToClientEvents {
 interface ServerToServerEvents {}
 
 interface SocketData {
-    session: {
-        gameId: string;
-        clientId: string;
-        role: "player" | "super_player";
-    }
+    session: SessionData;
 }
 
 type IOServer = Server<

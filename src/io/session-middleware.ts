@@ -1,6 +1,6 @@
-import type { IOServerSocket, MiddlewareNext } from "./types";
+import type { IOServer, IOServerSocket, MiddlewareNext } from "./types";
 import { type TokenPayload, verifyJwt } from "../utils";
-import { expireSession } from "../session-store";
+import * as sessionStore from "../session-store";
 
 interface AuthPayload {
     gameToken: string;
@@ -21,53 +21,83 @@ function isAuthPayload(data: unknown): data is AuthPayload {
     return false;
 }
 
-async function ioSessionMiddleware(socket: IOServerSocket, next: MiddlewareNext) {
+function assertAuthenticated(socket: IOServerSocket) {
     if (isAuthPayload(socket.handshake.auth)) {
         const { clientToken, gameToken } = socket.handshake.auth;
 
         if (typeof clientToken === "undefined") {
-            return next(new Error("missing_session_token"));
+            throw new Error("missing_session_token");
         }
 
         if (typeof gameToken === "undefined") {
-            return next(new Error("missing_game_token"));
+            throw new Error("missing_game_token");
         }
-        
+
         let gameTokenData: TokenPayload;
         let clientTokenData: TokenPayload;
 
         try {
             gameTokenData = verifyJwt(gameToken);
         } catch (error) {
-            return next(new Error("invalid_game_token"));
+            throw new Error("invalid_game_token");
         }
 
         try {
             clientTokenData = verifyJwt(clientToken);
         } catch (error) {
-            return next(new Error("invalid_session_token"));
+            throw new Error("invalid_session_token");
         }
-        
+
         if (clientTokenData.game_id !== gameTokenData.game_id) {
-            void expireSession({
+            void sessionStore.expireSession({
                 gameId: clientTokenData.game_id,
                 clientId: clientTokenData.jti,
             });
-            return next(new Error("invalid_session_token"));
+            throw new Error("invalid_session_token");
         }
 
-        const { role } = gameTokenData;
-        const { jti, game_id } = clientTokenData;
-
-        socket.data.session = {
-            role: role!,
-            gameId: game_id,
-            clientId: jti,
+        return {
+            role: gameTokenData.role!,
+            clientId: clientTokenData.jti,
+            gameId: clientTokenData.game_id,
         };
-
-        return next();
     }
-    return next(new Error("unauthorized"));
+
+    throw new Error("unauthorized");
 }
 
-export { ioSessionMiddleware };
+function makeIOSessionMiddleware(io: IOServer) {
+    return async (socket: IOServerSocket, next: MiddlewareNext) => {
+        try {
+            const { role, gameId, clientId } = assertAuthenticated(socket);
+    
+            const session = await sessionStore.findSession({ clientId, gameId });
+    
+            if (session) {
+                const allSocketIds = (await io.fetchSockets()).map((socket) => socket.id);
+                const sockets = session.sockets
+                    .filter((socketId) => allSocketIds.includes(socketId))
+                    .concat(socket.id);
+                socket.data.session = await sessionStore.saveSession({
+                    ...session,
+                    sockets,
+                });
+            } else {
+                socket.data.session = await sessionStore.saveSession({
+                    clientId,
+                    gameId,
+                    role,
+                    sockets: [socket.id],
+                    playerIds: [],
+                });
+            }
+    
+        } catch (error) {
+            return next(error as Error);
+        }
+    
+        return next();
+    }
+}
+
+export { makeIOSessionMiddleware };

@@ -38,8 +38,8 @@ function _deserializeSessionData([clientId, gameId, role, sockets, playerIds]: s
         clientId,
         gameId,
         role,
-        sockets: sockets.split(","),
-        playerIds: playerIds.split(","),
+        sockets: sockets.split(",").filter(Boolean),
+        playerIds: playerIds.split(",").filter(Boolean),
     };
 }
 
@@ -66,8 +66,6 @@ function _serializeSessionKey({ gameId, clientId }: SessionKey) {
     return `session:${gameId}__${clientId}`;
 }
 
-
-
 async function findSession(key: SessionKey) {
     const session: string[] | null[] = await redisClient.hmGet(
         _serializeSessionKey(key),
@@ -81,13 +79,9 @@ async function findSession(key: SessionKey) {
     return null;
 }
 
-async function saveSession({
-    clientId,
-    gameId,
-    role,
-    playerIds,
-    sockets
-}: SessionData) {
+async function saveSession(sessionData: SessionData) {
+    const { clientId, gameId, role, playerIds, sockets } = sessionData;
+    
     await redisClient
         .multi()
         .hSet(_serializeSessionKey({ gameId, clientId }), [
@@ -104,6 +98,8 @@ async function saveSession({
         ])
         .persist(_serializeSessionKey({ gameId, clientId }))
         .exec();
+    
+    return sessionData;
 }
 
 async function listConnectedClients() {

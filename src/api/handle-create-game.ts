@@ -2,7 +2,6 @@ import type { Request, Response } from "express";
 
 import { dbCreateGame } from "../db/game";
 import { dbCreateGameLink } from "../db/game-link";
-import { signJwt } from "../utils";
 
 /**
  * Create a new game.
@@ -14,35 +13,12 @@ import { signJwt } from "../utils";
 async function handleCreateGame(req: Request, res: Response) {
     const { id: game_id } = await dbCreateGame();
 
-    const playerLink = await dbCreateGameLink(
-        game_id,
-        signJwt(
-            {
-                game_id,
-                role: "player",
-                kind: "link"
-            },
-            {
-                expiresIn: "5y"
-            }
-        )
-    );
+    const [ownerLink, guestLink] = await Promise.all([
+        await dbCreateGameLink(game_id, "owner"),
+        await dbCreateGameLink(game_id, "guest"),
+    ]);
 
-    const superPlayerLink = await dbCreateGameLink(
-        game_id,
-        signJwt(
-            {
-                game_id,
-                role: "super_player",
-                kind: "link"
-            },
-            {
-                expiresIn: "5y"
-            }
-        )
-    );
-
-    res.json({ playerLink, superPlayerLink });
+    res.json({ ownerLink, guestLink });
 }
 
 export { handleCreateGame };

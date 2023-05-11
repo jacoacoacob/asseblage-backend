@@ -10,7 +10,9 @@ interface ClientToServerEvents {
 }
 
 interface ServerToClientEvents {
-    clients: (data: SessionData[]) => void;
+    session: (data: SessionData) => void;
+    // users: (data: SessionData[]) => void;
+    // user_disconnected: (data: SessionData) => void;
 }
 
 interface ServerToServerEvents {}
@@ -24,7 +26,7 @@ type IOServer = Server<
     ServerToClientEvents,
     ServerToServerEvents,
     SocketData
-    >;
+>;
     
 type IOServerSocket = Socket<    
     ClientToServerEvents,

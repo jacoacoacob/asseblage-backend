@@ -1,30 +1,25 @@
 import { pool } from "./pool";
 
-async function dbSelectGame(gameId: string, ) {
-    const { rows } = await pool.query("SELECT * FROM game WHERE id = $1");
+type TCGameHistory = Array<{ type: string; data: unknown }>;
 
-    return rows;
+interface TRGame {
+    id: string;
+    history: TCGameHistory;
 }
 
+async function dbSelectGame(gameId: string) {
+    const { rows } = await pool.query("SELECT * FROM game WHERE id = $1", [gameId]);
 
-interface RowGame {
-    id: string;
-    history: any;
+    return rows[0] as TRGame;
 }
 
 async function dbCreateGame() {
     const { rows } = await pool.query("INSERT INTO game DEFAULT VALUES RETURNING *");
 
-    return rows[0] as RowGame;
+    return rows[0] as TRGame;
 }
 
-interface Event {
-    type: string;
-    data: unknown;
-}
-
-
-async function dbUpdateGameHistory(gameId: string, events: Event[]) {
+async function dbUpdateGameHistory(gameId: string, events: TCGameHistory[]) {
     await pool.query(`
         UPDATE game SET history = (
             SELECT history || $1 WHERE id = $2

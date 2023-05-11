@@ -10,7 +10,7 @@ dotenv.config();
 import { api } from "./api/routes";
 import { makeIOSessionMiddleware } from "./io/session-middleware";
 import { getEnv } from "./utils";
-import { onConnection } from "./io/on-connection";
+import { makeConnectionHandler } from "./io/on-connection";
 
 const PORT = getEnv("PORT", 3000);
 const ALLOWED_ORIGINS = getEnv("ALLOWED_ORIGINS", "").split(",");
@@ -34,9 +34,7 @@ io.engine.use(cors());
 
 io.use(makeIOSessionMiddleware(io));
 
-io.on("connection", (socket) => {
-    onConnection(io, socket);
-});
+io.on("connection", makeConnectionHandler(io));
 
 httpServer.listen(PORT, () => {
     console.log("Server listening on port:", PORT);

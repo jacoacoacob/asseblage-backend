@@ -1,6 +1,7 @@
 -- Clean up existing database objects
 
 DROP TABLE IF EXISTS game_player;
+DROP TABLE IF EXISTS game_client;
 DROP TABLE IF EXISTS game_link;
 DROP TABLE IF EXISTS game;
 
@@ -17,16 +18,25 @@ CREATE TABLE IF NOT EXISTS game (
     history JSONB
 );
 
-CREATE TABLE IF NOT EXISTS game_link (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    game_id UUID REFERENCES game,
-    is_revoked BOOLEAN DEFAULT false,
-    token TEXT 
-);
-
+-- This represents a someone participating in a game.
+-- One client can support multiple players.
 CREATE TABLE IF NOT EXISTS game_player (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     game_id UUID REFERENCES game,
-    name TEXT,
-    UNIQUE(game_id, name)
+    display_name TEXT NOT NULL,
+    UNIQUE(game_id, display_name)
+);
+
+CREATE TABLE IF NOT EXISTS game_link (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    game_id UUID REFERENCES game,
+    role TEXT NOT NULL
+);
+
+-- This represents a web browser that has opened a game page
+-- with a given link
+CREATE TABLE IF NOT EXISTS game_client (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    game_link_id UUID REFERENCES game_link,
+    nickname TEXT DEFAULT ''
 );

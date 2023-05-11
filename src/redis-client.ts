@@ -1,40 +1,43 @@
 import { createClient } from "redis";
 
-const redisClient = createClient({ url: process.env.REDIS_URL });
+import { deserializeSessionKey } from "./session-store";
+import type { IOServer } from "./io/types";
 
-redisClient.on("error", (error) => {
-    console.log("[redisClient] onError", error);
-});
+const redisClient = createClient({
+    url: process.env.REDIS_URL,
+    socket: {
+        reconnectStrategy: 1000,
+    }
+}).on("error", (error) => {
+    console.log("[redisClient] error", error);
+}).on("connect", () => {
+    console.log("[redisClient] connect");
+}).on("ready", () => {
+    console.log("[redisClient] ready");
+}).on("end", () => {
+    console.log("[redisClient] end");
+})
 
-redisClient.connect().catch(console.error);
-
+redisClient
+    .connect()
+    .catch((error) => {
+        console.error("[redisClient] connect error", new Date().toJSON(), error);
+    });
 
 redisClient.configSet("notify-keyspace-events", "Ex");
 
 const subscriber = redisClient.duplicate();
 
-subscriber.on("error", (error) => {
-    console.log("[redisClient::Subscriber] onError", error);
-});
-
 subscriber.connect().catch(console.error);
 
-const listeners: ((message: string) => void)[] = [];
+function makeSessionExpiredHandler(io: IOServer) {
+    subscriber.subscribe("__keyevent@0__:expired", (key) => {
+        const { gameId } = deserializeSessionKey(key);
 
-subscriber.subscribe("__keyevent@0__:expired", (key) => {
-    console.log("[redisClient]: Expired Key", key);
-    listeners.forEach((cb) => cb(key));
-});
-
-function onExpired(cb: (message: string) => void) {
-    listeners.push(cb);   
+        // io.to(`game:${gameId}`).emit("user_disconnected", )
+        console.log("[redisClient]: Expired Key", key);
+        // listeners.forEach((cb) => cb(key));
+    });
 }
 
-function offExpired(cb: (message: string) => void) {
-    const indexOfCb = listeners.indexOf(cb);
-    if (indexOfCb > -1) {
-        listeners.splice(indexOfCb, 1);
-    }
-}
-
-export { redisClient, onExpired, offExpired };
+export { redisClient, makeSessionExpiredHandler };

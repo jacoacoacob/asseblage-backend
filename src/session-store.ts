@@ -3,7 +3,7 @@ import type { RedisMultiQueuedCommand } from "@redis/client/dist/lib/multi-comma
 
 const EXPIRE_SESSION_TTL_SECONDS = 3;
 
-interface SessionData {
+interface ServerSession {
     /**
      * The unique identifier used to associate various database objects
      * related to a given game.
@@ -14,6 +14,10 @@ interface SessionData {
      * specific device).
      */
     clientId: string;
+    /**
+     * A human readable name for use in UI
+     */
+    clientDisplayName: string;
     /**
      * A role endows a client with a set of permissions.
      */
@@ -29,15 +33,18 @@ interface SessionData {
     sockets: string[];
 }
 
+type ClientSession = Omit<ServerSession, "sockets">;
+
 /**
  * Convert session data stored in redis to SessionData interface complant
  * javascript object
  */
-function deserializeSessionData([clientId, gameId, role, sockets, playerIds]: string[]): SessionData {
+function deserializeSessionData([clientId, gameId, clientDisplayName, role, sockets, playerIds]: string[]): ServerSession {
     return {
         clientId,
         gameId,
         role,
+        clientDisplayName,
         sockets: sockets.split(",").filter(Boolean),
         playerIds: playerIds.split(",").filter(Boolean),
     };
@@ -53,9 +60,9 @@ interface SessionKey {
  */
 function deserializeSessionKey(rawSessionKey: string): SessionKey {
     const [gameId, clientId] = rawSessionKey
-        .slice(rawSessionKey.indexOf(":"))
+        .slice(rawSessionKey.indexOf(":") + 1)
         .split("__");
-    
+
     return { gameId, clientId };
 }
 
@@ -69,7 +76,7 @@ function serializeSessionKey({ gameId, clientId }: SessionKey) {
 async function findSession(key: SessionKey) {
     const session: string[] | null[] = await redisClient.hmGet(
         serializeSessionKey(key),
-        ["clientId", "gameId", "role", "sockets", "playerIds"]
+        ["clientId", "gameId", "clientDisplayName", "role", "sockets", "playerIds"]
     );
 
     if (session.every((field) => typeof field === "string")) {
@@ -79,9 +86,9 @@ async function findSession(key: SessionKey) {
     return null;
 }
 
-async function saveSession(sessionData: SessionData) {
-    const { clientId, gameId, role, playerIds, sockets } = sessionData;
-    
+async function saveSession(sessionData: ServerSession) {
+    const { clientId, gameId, clientDisplayName, role, playerIds, sockets } = sessionData;
+
     await redisClient
         .multi()
         .hSet(serializeSessionKey({ gameId, clientId }), [
@@ -89,6 +96,8 @@ async function saveSession(sessionData: SessionData) {
             clientId,
             "gameId",
             gameId,
+            "clientDisplayName",
+            clientDisplayName,
             "role",
             role,
             "sockets",
@@ -98,11 +107,11 @@ async function saveSession(sessionData: SessionData) {
         ])
         .persist(serializeSessionKey({ gameId, clientId }))
         .exec();
-    
+
     return sessionData;
 }
 
-async function listConnectedClients() {
+async function listActiveSessions() {
     const clientIDs = new Set<string>();
     let cursor = 0;
 
@@ -121,7 +130,7 @@ async function listConnectedClients() {
 
     clientIDs.forEach(sessionID => {
         commands.push({
-            args: ["hmget", sessionID, "clientId", "gameId", "role", "sockets", "playerIds"],
+            args: ["hmget", sessionID, "clientId", "gameId", "clientDisplayName", "role", "sockets", "playerIds"],
         });
     });
 
@@ -130,15 +139,26 @@ async function listConnectedClients() {
     return results.map(session => deserializeSessionData(session as string[]));
 }
 
-async function listConnectedClientsForGame(gameId: string) {
-    const clients = await listConnectedClients();
+async function listActiveSessionsForGame(gameId: string) {
+    const allClients = await listActiveSessions();
 
-    return clients.filter((client) => client.gameId === gameId);
+    return allClients.filter((client) => client.gameId === gameId);
+}
+
+function mapClientSession({ sockets, ...clientSession }: ServerSession): ClientSession {
+    return clientSession;
 }
 
 async function expireSession(key: SessionKey) {
     return redisClient.expire(serializeSessionKey(key), EXPIRE_SESSION_TTL_SECONDS);
 }
 
-export { findSession, expireSession, saveSession, listConnectedClientsForGame, deserializeSessionKey };
-export type { SessionData };
+export {
+    findSession,
+    expireSession,
+    saveSession,
+    listActiveSessionsForGame,
+    deserializeSessionKey,
+    mapClientSession
+};
+export type { ServerSession, ClientSession };

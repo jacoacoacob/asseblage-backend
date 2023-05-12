@@ -1,6 +1,6 @@
 import { createClient } from "redis";
 
-import { deserializeSessionKey } from "./session-store";
+import * as sessionStore from "./session-store";
 import type { IOServer } from "./io/types";
 
 const redisClient = createClient({
@@ -31,12 +31,14 @@ const subscriber = redisClient.duplicate();
 subscriber.connect().catch(console.error);
 
 function makeSessionExpiredHandler(io: IOServer) {
-    subscriber.subscribe("__keyevent@0__:expired", (key) => {
-        const { gameId } = deserializeSessionKey(key);
+    subscriber.subscribe("__keyevent@0__:expired", async (key) => {
+        const { gameId } = sessionStore.deserializeSessionKey(key);
 
-        // io.to(`game:${gameId}`).emit("user_disconnected", )
-        console.log("[redisClient]: Expired Key", key);
-        // listeners.forEach((cb) => cb(key));
+        const sessions = await sessionStore.listActiveSessionsForGame(gameId);
+
+        const clients = sessions.map(sessionStore.mapClientSession);
+
+        io.to(`game:${gameId}`).emit("connected_clients", clients);
     });
 }
 

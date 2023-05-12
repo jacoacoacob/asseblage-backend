@@ -8,9 +8,9 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { api } from "./api/routes";
-import { makeIOSessionMiddleware } from "./io/session-middleware";
 import { getEnv } from "./utils";
 import { makeConnectionHandler } from "./io/on-connection";
+import { makeIOSessionMiddleware } from "./io/session-middleware";
 
 const PORT = getEnv("PORT", 3000);
 const ALLOWED_ORIGINS = getEnv("ALLOWED_ORIGINS", "").split(",");

@@ -1,5 +1,4 @@
 import { pool } from "./pool";
-import { DbResult } from "./types";
 
 interface TRGameLink {
     id: string;
@@ -18,13 +17,13 @@ async function dbCreateGameLink(gameId: string, role: TRGameLink["role"]) {
         [gameId, role]
     );
 
-    return rows[0] as DbResult<TRGameLink>;
+    return rows[0] as TRGameLink | undefined;
 }
 
 async function dbGetGameLink(id: string) {
     const { rows } = await pool.query(`SELECT * FROM game_link WHERE id = $1`, [id]);
 
-    return rows[0] as DbResult<TRGameLink>;
+    return rows[0] as TRGameLink | undefined;
 }
 
 export { dbCreateGameLink, dbGetGameLink };

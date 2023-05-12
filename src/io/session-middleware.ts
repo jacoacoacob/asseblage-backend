@@ -1,5 +1,4 @@
 import type { IOServer, IOServerSocket, MiddlewareNext } from "./types";
-import { type TokenPayload, verifyJwt } from "../utils";
 import * as sessionStore from "../session-store";
 import { dbCreateGameClient, dbGetGameClient } from "../db/game-client";
 import { dbGetGameLink } from "../db/game-link";
@@ -23,63 +22,18 @@ function isAuthPayload(data: unknown): data is AuthPayload {
     return false;
 }
 
-// function assertAuthenticated_OLD(socket: IOServerSocket) {
-//     if (isAuthPayload(socket.handshake.auth)) {
-//         const { clientId, gameId } = socket.handshake.auth;
-
-//         if (typeof clientId === "undefined") {
-//             throw new Error("missing_session_token");
-//         }
-
-//         if (typeof gameToken === "undefined") {
-//             throw new Error("missing_game_token");
-//         }
-
-//         let gameTokenData: TokenPayload;
-//         let clientTokenData: TokenPayload;
-
-//         try {
-//             gameTokenData = verifyJwt(gameToken);
-//         } catch (error) {
-//             throw new Error("invalid_game_token");
-//         }
-
-//         try {
-//             clientTokenData = verifyJwt(clientToken);
-//         } catch (error) {
-//             throw new Error("invalid_session_token");
-//         }
-
-//         if (clientTokenData.game_id !== gameTokenData.game_id) {
-//             void sessionStore.expireSession({
-//                 gameId: clientTokenData.game_id,
-//                 clientId: clientTokenData.jti,
-//             });
-//             throw new Error("invalid_session_token");
-//         }
-
-//         return {
-//             role: gameTokenData.role!,
-//             clientId: clientTokenData.jti,
-//             gameId: clientTokenData.game_id,
-//         };
-//     }
-
-//     throw new Error("unauthorized");
-// }
-
 async function authenticate(socket: IOServerSocket) {
     if (isAuthPayload(socket.handshake.auth)) {
-        let { clientId, gameLinkId } = socket.handshake.auth;
+        const { clientId, gameLinkId } = socket.handshake.auth;
 
         if (typeof gameLinkId === "undefined") {
-            throw new Error("bad_credentials");
+            throw new Error("ws_unauthorized");
         }
 
         const gameLink = await dbGetGameLink(gameLinkId);
 
         if (typeof gameLink === "undefined") {
-            throw new Error("bad_credentials");
+            throw new Error("ws_unauthorized");
         }
 
         let gameClient;
@@ -91,7 +45,7 @@ async function authenticate(socket: IOServerSocket) {
                     "Unable to create game_client with game_link_id:",
                     gameLinkId
                 );
-                throw new Error("unauthorized");
+                throw new Error("ws_unauthorized");
             }
         } else {
             gameClient = await dbGetGameClient(clientId);
@@ -100,7 +54,7 @@ async function authenticate(socket: IOServerSocket) {
                     "Unable to get game_client with clientId:",
                     clientId
                 );
-                throw new Error("unauthorized");
+                throw new Error("ws_unauthorized");
             }
         }
 
@@ -108,22 +62,25 @@ async function authenticate(socket: IOServerSocket) {
             console.error(
                 "gameClient.game_link_id did not match socket.handshake.auth.gameLinkId"
             );
-            throw new Error("unauthorized");
+            throw new Error("ws_unauthorized");
         }
-
-        clientId = gameClient.id;
 
         const { role, game_id: gameId } = gameLink;
         
-        return { role, clientId, gameId };
+        return {
+            role,
+            gameId,
+            clientId: gameClient.id,
+            clientDisplayName: gameClient.display_name
+        };
     }
-    throw new Error("bad_credentials");
+    throw new Error("ws_unauthorized");
 }
 
 function makeIOSessionMiddleware(io: IOServer) {
     return async (socket: IOServerSocket, next: MiddlewareNext) => {
         try {
-            const { role, gameId, clientId } = await authenticate(socket);
+            const { role, gameId, clientId, clientDisplayName } = await authenticate(socket);
     
             const session = await sessionStore.findSession({ clientId, gameId });
     
@@ -144,6 +101,7 @@ function makeIOSessionMiddleware(io: IOServer) {
             } else {
                 socket.data.session = await sessionStore.saveSession({
                     clientId,
+                    clientDisplayName,
                     gameId,
                     role,
                     sockets: [socket.id],
@@ -152,7 +110,7 @@ function makeIOSessionMiddleware(io: IOServer) {
             }
     
         } catch (error) {
-            console.error(error)
+            console.error(error);
             return next(new Error("Internal Server Error"));
         }
     

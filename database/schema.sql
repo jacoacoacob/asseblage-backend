@@ -38,5 +38,5 @@ CREATE TABLE IF NOT EXISTS game_link (
 CREATE TABLE IF NOT EXISTS game_client (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     game_link_id UUID REFERENCES game_link,
-    nickname TEXT DEFAULT ''
+    display_name TEXT DEFAULT ''
 );

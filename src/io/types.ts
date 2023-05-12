@@ -1,7 +1,7 @@
 
 import type { Server, Socket } from "socket.io";
 import type { ExtendedError } from "socket.io/dist/namespace";
-import { SessionData } from "../session-store";
+import { ServerSession, ClientSession } from "../session-store";
 
 type MiddlewareNext = (err?: ExtendedError) => void;
 
@@ -10,15 +10,14 @@ interface ClientToServerEvents {
 }
 
 interface ServerToClientEvents {
-    session: (data: SessionData) => void;
-    // users: (data: SessionData[]) => void;
-    // user_disconnected: (data: SessionData) => void;
+    session: (data: ClientSession) => void;
+    connected_clients: (data: ClientSession[]) => void;
 }
 
 interface ServerToServerEvents {}
 
 interface SocketData {
-    session: SessionData;
+    session: ServerSession;
 }
 
 type IOServer = Server<
@@ -42,5 +41,5 @@ export type {
     MiddlewareNext,
     ServerToClientEvents,
     ServerToServerEvents,
-    SocketData
+    SocketData,
 };

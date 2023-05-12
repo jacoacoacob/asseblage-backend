@@ -1,8 +1,12 @@
+import { makeSessionExpiredHandler } from "../redis-client";
 import * as sessionStore from "../session-store";
 import { createDisconnectHandler } from "./on-disconnect";
 import type { IOServer, IOServerSocket } from "./types";
 
 function makeConnectionHandler(io: IOServer) {
+
+    makeSessionExpiredHandler(io);
+
     return async (socket: IOServerSocket) => {
         const { clientId, gameId } = socket.data.session!;
 
@@ -13,32 +17,14 @@ function makeConnectionHandler(io: IOServer) {
         const gameState = {};
     
         // find all game players
-        const clients = await sessionStore.listConnectedClientsForGame(gameId);
+        const sessions = await sessionStore.listActiveSessionsForGame(gameId);
 
-        socket.emit("session", socket.data.session!);
+        socket.emit("session", sessionStore.mapClientSession(socket.data.session!));
         
-        // io.to(`game:${gameId}`).emit("users", clients);
+        io.to(`game:${gameId}`).emit("connected_clients", sessions.map(sessionStore.mapClientSession));
     
         socket.on("disconnect", createDisconnectHandler(io, socket));
     }
 }
-
-// async function onConnection(io: IOServer, socket: IOServerSocket) {
-//     const { clientId, gameId } = socket.data.session!;
-
-//     // join game room
-//     socket.join(`game:${gameId}`);
-
-//     // fetch game state from database
-//     const gameState = {};
-
-//     // find all game players
-//     const clients = await sessionStore.listConnectedClientsForGame(gameId);
-    
-//     io.to(`game:${gameId}`).emit("clients", clients);
-
-//     socket.on("disconnect", createDisconnectHandler(io, socket));
-    
-// }
 
 export { makeConnectionHandler };

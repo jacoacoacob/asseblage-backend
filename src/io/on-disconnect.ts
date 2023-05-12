@@ -3,7 +3,7 @@ import type { DisconnectReason } from "socket.io";
 import * as sessionStore from "../session-store";
 import type { IOServer, IOServerSocket } from "./types";
 
-function createDisconnectHandler(io: IOServer, socket: IOServerSocket) {
+function createDisconnectHandler(_: IOServer, socket: IOServerSocket) {
     return async (reason: DisconnectReason) => {
         const { clientId, gameId } = socket.data.session!
 

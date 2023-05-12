@@ -3,7 +3,7 @@ import { pool } from "./pool";
 interface TRGameClient {
     id: string;
     game_link_id: string;
-    nickname: string;
+    display_name: string;
 }
 
 async function dbCreateGameClient(gameLinkId: string) {
@@ -18,7 +18,10 @@ async function dbCreateGameClient(gameLinkId: string) {
 }
 
 async function dbGetGameClient(id: string) {
-    const { rows } = await pool.query("SELECT * FROM game_client WHERE id = $1", [id]);
+    const { rows } = await pool.query(
+        "SELECT * FROM game_client WHERE id = $1",
+        [id]
+    );
 
     return rows[0] as TRGameClient | undefined;
 }

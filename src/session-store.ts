@@ -145,7 +145,8 @@ async function listActiveSessionsForGame(gameId: string) {
     return allClients.filter((client) => client.gameId === gameId);
 }
 
-function mapClientSession({ sockets, ...clientSession }: ServerSession): ClientSession {
+function mapClientSession(session: ServerSession): ClientSession {
+    const { sockets, ...clientSession } = session;
     return clientSession;
 }
 

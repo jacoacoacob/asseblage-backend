@@ -16,12 +16,13 @@ function createDisconnectHandler(_: IOServer, socket: IOServerSocket) {
 
             await sessionStore.saveSession(session);
 
+            socket.data.session = session;
+
             if (session.sockets.length === 0) {
                 await sessionStore.expireSession({ clientId, gameId });
             }
         }
 
-        socket.data.session = session!;
     }
 }
 

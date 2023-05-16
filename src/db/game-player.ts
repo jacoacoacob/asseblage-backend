@@ -3,7 +3,15 @@ import { pool } from "./pool";
 interface TRGamePlayer {
     id: string;
     game_id: string;
-    name: string;
+    display_name: string;
+}
+
+async function dbListGamePlayers(gameId: string) {
+    const { rows } = await pool.query(
+        "SELECT * FROM game_player WHERE game_id = $1", [gameId]
+    );
+
+    return rows as TRGamePlayer[];
 }
 
 async function dbCreateGamePlayer(gameId: string, displayName: string) {
@@ -29,4 +37,5 @@ async function dbUpdateGamePlayerDisplayName(playerId: string, displayName: stri
     return rows[0] as TRGamePlayer | undefined;
 }
 
-export { dbCreateGamePlayer, dbUpdateGamePlayerDisplayName };
+export { dbCreateGamePlayer, dbUpdateGamePlayerDisplayName, dbListGamePlayers };
+export { TRGamePlayer };

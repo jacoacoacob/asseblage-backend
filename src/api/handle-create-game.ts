@@ -1,7 +1,8 @@
 import type { Request, Response } from "express";
 
-import { dbCreateGame } from "../db/game";
+import { dbCreateGame } from "../db/game-meta";
 import { dbCreateGameLink } from "../db/game-link";
+import { dbCreateGameHistory } from "../db/game-history";
 
 /**
  * Create a new game.
@@ -11,11 +12,12 @@ import { dbCreateGameLink } from "../db/game-link";
  * body to request a client auth token.
  */
 async function handleCreateGame(req: Request, res: Response) {
-    const { id: game_id } = await dbCreateGame();
+    const { id: gameId } = (await dbCreateGame())!;
 
-    const [ownerLink, guestLink] = await Promise.all([
-        await dbCreateGameLink(game_id, "owner"),
-        await dbCreateGameLink(game_id, "guest"),
+    const [ownerLink, guestLink, _] = await Promise.all([
+        dbCreateGameLink(gameId, "owner"),
+        dbCreateGameLink(gameId, "guest"),
+        dbCreateGameHistory(gameId),
     ]);
 
     res.json({ ownerLink, guestLink });

@@ -3,6 +3,7 @@
 DROP TABLE IF EXISTS game_player;
 DROP TABLE IF EXISTS game_client;
 DROP TABLE IF EXISTS game_link;
+DROP TABLE IF EXISTS game_history;
 DROP TABLE IF EXISTS game;
 
 
@@ -15,7 +16,8 @@ CREATE EXTENSION "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS game (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    history JSONB
+    display_name TEXT,
+    phase TEXT DEFAULT 'setup'
 );
 
 -- This represents a someone participating in a game.
@@ -25,6 +27,11 @@ CREATE TABLE IF NOT EXISTS game_player (
     game_id UUID REFERENCES game,
     display_name TEXT NOT NULL,
     UNIQUE(game_id, display_name)
+);
+
+CREATE TABLE IF NOT EXISTS game_history (
+    game_id UUID REFERENCES game,
+    events JSONB
 );
 
 CREATE TABLE IF NOT EXISTS game_link (

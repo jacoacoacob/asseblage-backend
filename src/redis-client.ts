@@ -38,7 +38,7 @@ function makeSessionExpiredHandler(io: IOServer) {
 
         const clients = sessions.map(sessionStore.mapClientSession);
 
-        io.to(`game:${gameId}`).emit("connected_clients", clients);
+        io.to(`game:${gameId}`).emit("session:all", clients);
     });
 }
 

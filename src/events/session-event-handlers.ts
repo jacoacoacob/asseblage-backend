@@ -1,9 +1,10 @@
 import { dbUpdateClientDisplayName } from "../db/game-client";
 import { IOContext, IOServerSocket } from "../io/types";
 import * as sessionStore from "../session-store";
+import { resolveAndSend } from "./composed";
 
 function registerSessionEventHandlers(context: IOContext) {
-    const { io, socket, gameRoom } = context;
+    const { socket } = context;
     const { gameId, clientId } = socket.data.session!;
 
     socket.on("session:set_client_display_name", async (displayName) => {
@@ -21,10 +22,7 @@ function registerSessionEventHandlers(context: IOContext) {
                 clientDisplayName,
             });
 
-            io.in(gameRoom).emit(
-                "session:all",
-                await sessionStore.listActiveClientSessionsForGame(gameId)
-            );
+            await resolveAndSend(context, ["to_all", "session:all"]);
         }
     });
 

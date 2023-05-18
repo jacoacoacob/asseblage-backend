@@ -29,13 +29,14 @@ function makeConnectionHandler(io: IOServer) {
 
         registerResolvers(context);
 
-        resolveAndSend(context, [
+        resolveAndSend(
+            context,
             ["to_sender", "game:meta"],
             ["to_sender", "game:history"],
             ["to_sender", "game:players"],
             ["to_sender", "session:client_id"],
             ["to_all", "session:all"]
-        ])
+        )
 
         // const [gameMeta, gamePlayers, gameHistory, allSessions] = await Promise.all([
         //     // get game metadata

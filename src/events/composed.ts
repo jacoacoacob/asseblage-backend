@@ -13,8 +13,6 @@ type ResolverMap = {
     [EventType in keyof ServerToClientEvents]: Resolver<EventType>;
 }
 
-
-
 let resolvers: ResolverMap;
 
 function registerResolvers({ socket }: IOContext) {
@@ -56,7 +54,7 @@ type Destination =
 
 async function resolveAndSend(
     context: IOContext,
-    entityList: [Destination, keyof ServerToClientEvents][]
+    ...entityList: [Destination, keyof ServerToClientEvents][]
 ) {
     if (typeof resolvers === "undefined") {
         console.warn("[resolveAndSend] Resolvers not registered!");

@@ -111,6 +111,22 @@ async function saveSession(sessionData: ServerSession) {
     return sessionData;
 }
 
+type UpdateSessionData = Pick<ServerSession, "gameId" | "clientId"> & Partial<ServerSession>;
+
+async function updateSession(sessionData: UpdateSessionData) {
+    const { clientId, gameId } = sessionData;
+    
+    const current = await findSession({ clientId, gameId });
+
+    if (!current) {
+        throw new Error(
+            `Couldn't update session. No session found with key ${serializeSessionKey({ gameId, clientId })}`
+        );
+    }
+
+    return await saveSession({ ...current, ...sessionData });
+}
+
 async function listActiveSessions() {
     const clientIDs = new Set<string>();
     let cursor = 0;
@@ -158,6 +174,7 @@ export {
     findSession,
     expireSession,
     saveSession,
+    updateSession,
     listActiveSessionsForGame,
     deserializeSessionKey,
     mapClientSession

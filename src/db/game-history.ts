@@ -1,10 +1,13 @@
 import { pool } from "./pool";
 
-type TCGameHistoryEvents = Array<{ type: string; data: unknown }>;
+interface TCGameHistoryEvent {
+    type: string;
+    data: unknown;
+}
 
 interface TRGameHistory {
     game_id: string;
-    events: TCGameHistoryEvents;
+    events: TCGameHistoryEvent[];
 }
 
 async function dbCreateGameHistory(gameId: string) {
@@ -26,7 +29,7 @@ async function dbListGameHistoryEvents(gameId: string) {
     return (rows[0] as TRGameHistory).events ?? [];
 }
 
-async function dbUpdateGameHistory(gameId: string, events: TCGameHistoryEvents[]) {
+async function dbUpdateGameHistory(gameId: string, events: TCGameHistoryEvent[]) {
     await pool.query(`
         UPDATE game_history
            SET events = (SELECT events || $1 FROM game_history WHERE game_id = $2)
@@ -35,4 +38,4 @@ async function dbUpdateGameHistory(gameId: string, events: TCGameHistoryEvents[]
 }
 
 export { dbCreateGameHistory, dbListGameHistoryEvents, dbUpdateGameHistory };
-export type { TRGameHistory };
+export type { TRGameHistory, TCGameHistoryEvent };

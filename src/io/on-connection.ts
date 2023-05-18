@@ -1,5 +1,6 @@
+import { dbUpdateClientDisplayName } from "../db/game-client";
 import { dbListGameHistoryEvents } from "../db/game-history";
-import { dbGetGame } from "../db/game-meta";
+import { dbGetGame, dbUpdateGameDisplayName } from "../db/game-meta";
 import { dbListGamePlayers } from "../db/game-player";
 import { makeSessionExpiredHandler } from "../redis-client";
 import * as sessionStore from "../session-store";
@@ -11,7 +12,14 @@ function makeConnectionHandler(io: IOServer) {
     makeSessionExpiredHandler(io);
 
     return async (socket: IOServerSocket) => {
-        const { clientId, gameId, role } = socket.data.session!;
+        
+        const { data: { session } } = socket;
+        
+        if (!session) {
+            throw new Error("unauthenticated");
+        }
+        
+        const { clientId, gameId } = session;
 
         // join game room
         socket.join(`game:${gameId}`);
@@ -40,6 +48,30 @@ function makeConnectionHandler(io: IOServer) {
         socket.emit("session:client_id", clientId);
 
         gameRoom.emit("session:all", allSessions.map(sessionStore.mapClientSession));
+
+        socket.on("session:set_client_display_name", async (name) => {
+            const updatedClient = await dbUpdateClientDisplayName(clientId, name);
+
+            if (updatedClient) {
+                const { display_name } = updatedClient;
+                
+                const session = await sessionStore.findSession({ clientId, gameId });
+                
+                if (!session) {
+                    console.error("Couldn't find session");
+                    return;
+                }
+
+                await sessionStore.saveSession({
+                    ...session,
+                    clientDisplayName: display_name,
+                });
+
+                const allSessions = await sessionStore.listActiveSessionsForGame(gameId);
+
+                gameRoom.emit("session:all", allSessions.map(sessionStore.mapClientSession));
+            }
+        });
         
         socket.on("disconnect", createDisconnectHandler(io, socket));
     }

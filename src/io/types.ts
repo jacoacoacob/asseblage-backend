@@ -4,19 +4,25 @@ import type { ExtendedError } from "socket.io/dist/namespace";
 import { ServerSession, ClientSession } from "../session-store";
 import { TRGame } from "../db/game-meta";
 import { TRGamePlayer } from "../db/game-player";
-import { TRGameHistory } from "../db/game-history";
+import type { TCGameHistoryEvent } from "../db/game-history";
 
 type MiddlewareNext = (err?: ExtendedError) => void;
 
 interface ClientToServerEvents {
-    "game:event": (options: { type: string; data: unknown; }) => void;
+    "session:set_client_display_name": (name: string) => void;
+    "session:claim_player": (playerId: string) => void;
+    "game:start": () => void;
+    "game:end": () => void;
+    "game:set_display_name": (name: string) => void;
+    "game:add_player": (name: string) => void;
+    "game:event": (event: TCGameHistoryEvent ) => void;
 }
 
 interface ServerToClientEvents {
     "session:client_id": (data: ClientSession["clientId"]) => void;
     "session:all": (data: ClientSession[]) => void;
     "game:meta": (data: Pick<TRGame, "display_name" | "id" | "phase">) => void;
-    "game:history": (data: TRGameHistory["events"]) => void;
+    "game:history": (data: TCGameHistoryEvent[]) => void;
     "game:players": (data: TRGamePlayer[]) => void;
 }
 

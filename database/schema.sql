@@ -16,7 +16,7 @@ CREATE EXTENSION "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS game (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    display_name TEXT,
+    display_name TEXT DEFAULT '',
     phase TEXT DEFAULT 'setup'
 );
 
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS game_player (
 
 CREATE TABLE IF NOT EXISTS game_history (
     game_id UUID REFERENCES game,
-    events JSONB
+    events JSONB[]
 );
 
 CREATE TABLE IF NOT EXISTS game_link (

@@ -32,8 +32,6 @@ interface SocketData {
     session: ServerSession;
 }
 
-type IORoom = BroadcastOperator<ServerToClientEvents, SocketData>;
-
 type IOServer = Server<
     ClientToServerEvents,
     ServerToClientEvents,
@@ -48,10 +46,15 @@ type IOServerSocket = Socket<
     SocketData
 >;
 
+interface IOContext { 
+    io: IOServer;
+    socket: IOServerSocket;
+    gameRoom: string;
+}
 
 export type {
     ClientToServerEvents,
-    IORoom,
+    IOContext,
     IOServer,
     IOServerSocket,
     MiddlewareNext,

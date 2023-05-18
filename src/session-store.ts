@@ -34,6 +34,10 @@ interface ServerSession {
 }
 
 type ClientSession = Omit<ServerSession, "sockets">;
+// interface ClientSession extends ServerSession {
+//     sockets?: never[];
+// }
+
 
 /**
  * Convert session data stored in redis to SessionData interface complant
@@ -161,6 +165,12 @@ async function listActiveSessionsForGame(gameId: string) {
     return allClients.filter((client) => client.gameId === gameId);
 }
 
+async function listActiveClientSessionsForGame(gameId: string) {
+    const allSessions = await listActiveSessionsForGame(gameId);
+
+    return allSessions.map(mapClientSession);
+}
+
 function mapClientSession(session: ServerSession): ClientSession {
     const { sockets, ...clientSession } = session;
     return clientSession;
@@ -176,6 +186,7 @@ export {
     saveSession,
     updateSession,
     listActiveSessionsForGame,
+    listActiveClientSessionsForGame,
     deserializeSessionKey,
     mapClientSession
 };

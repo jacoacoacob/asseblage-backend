@@ -21,7 +21,7 @@ interface ServerSession {
     /**
      * A role endows a client with a set of permissions.
      */
-    role: string;
+    role: "owner" | "guest";
     /** 
      * Each connected client may represent 1 or more players in a game.
      */
@@ -47,8 +47,8 @@ function deserializeSessionData([clientId, gameId, clientDisplayName, role, sock
     return {
         clientId,
         gameId,
-        role,
         clientDisplayName,
+        role: role as ServerSession["role"],
         sockets: sockets.split(",").filter(Boolean),
         playerIds: playerIds.split(",").filter(Boolean),
     };

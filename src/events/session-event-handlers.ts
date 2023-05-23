@@ -27,7 +27,7 @@ function registerSessionEventHandlers(context: IOContext) {
     });
 
     socket.on("session:claim_player", (playerId) => {
-        console.log("[session:claim_player]", playerId);
+
     });
 }
 

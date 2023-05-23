@@ -8,13 +8,27 @@ import type { TCGameHistoryEvent } from "../db/game-history";
 
 type MiddlewareNext = (err?: ExtendedError) => void;
 
+interface AckPayload {
+    success: boolean;
+    message?: string;
+}
+
+type Ack<IsSender extends boolean = false> = IsSender extends true
+    ? (...args: [Error | null, AckPayload]) => void
+    : (...args: [AckPayload]) => void;
+
+type EmitWithAck<Data> = (data: Data, ack: Ack<true>) => void;
+type ReceiveWithAck<Data> = (data: Data, ack: Ack) => void;
+
 interface ClientToServerEvents {
     "session:set_client_display_name": (name: string) => void;
     "session:claim_player": (playerId: string) => void;
     "game:start": () => void;
     "game:end": () => void;
     "game:set_display_name": (name: string) => void;
-    "game:add_player": (name: string) => void;
+    "game:add_player": ReceiveWithAck<{ name: string, assignToSender: boolean }>;
+    "game:remove_player": ReceiveWithAck<{ playerId: string }>;
+    "game:update_player_name": ReceiveWithAck<{ playerId: string; name: string }>;
     "game:event": (event: TCGameHistoryEvent ) => void;
 }
 

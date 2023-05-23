@@ -19,11 +19,7 @@ function makeConnectionHandler(io: IOServer) {
 
         const { gameId } = session;
 
-        const context: IOContext = {
-            io,
-            socket,
-            gameRoom: `game:${gameId}`
-        };
+        const context: IOContext = { io, socket, gameRoom: `game:${gameId}` };
 
         socket.join(context.gameRoom);
 
@@ -37,29 +33,6 @@ function makeConnectionHandler(io: IOServer) {
             ["to_sender", "session:client_id"],
             ["to_all", "session:all"]
         )
-
-        // const [gameMeta, gamePlayers, gameHistory, allSessions] = await Promise.all([
-        //     // get game metadata
-        //     dbGetGame(gameId),
-        //     // find all player entities registered for this game
-        //     dbListGamePlayers(gameId),
-        //     // list all game events
-        //     dbListGameHistoryEvents(gameId),
-        //     // find all connected clients
-        //     sessionStore.listActiveClientSessionsForGame(gameId),
-        // ]);
-
-        // if (typeof gameMeta === "undefined") {
-        //     console.error("Couldn't find game with id:", gameId);
-        //     return;
-        // }
-
-        // socket.emit("game:meta", gameMeta);
-        // socket.emit("game:players", gamePlayers);
-        // socket.emit("game:history", gameHistory);
-        // socket.emit("session:client_id", clientId);
-
-        // gameRoom.emit("session:all", allSessions);
 
         registerSessionEventHandlers(context);
         registerGameEventHandlers(context);

@@ -37,5 +37,9 @@ async function dbUpdateGamePlayerDisplayName(playerId: string, displayName: stri
     return rows[0] as TRGamePlayer | undefined;
 }
 
-export { dbCreateGamePlayer, dbUpdateGamePlayerDisplayName, dbListGamePlayers };
+async function dbDeleteGamePlayer(playerId: string) {
+    await pool.query("DELETE FROM game_player WHERE id = $1", [playerId]);
+}
+
+export { dbCreateGamePlayer, dbUpdateGamePlayerDisplayName, dbListGamePlayers, dbDeleteGamePlayer };
 export { TRGamePlayer };

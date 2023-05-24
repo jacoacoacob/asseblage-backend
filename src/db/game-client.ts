@@ -4,6 +4,8 @@ interface TRGameClient {
     id: string;
     game_link_id: string;
     display_name: string;
+    created: string;
+    last_connected: string;
 }
 
 async function dbCreateGameClient(gameLinkId: string) {

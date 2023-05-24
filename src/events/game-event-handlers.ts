@@ -13,7 +13,7 @@ function registerGameEventHandlers(context: IOContext) {
         
         let player;
         try {
-            player = await dbCreateGamePlayer(gameId, name);
+            player = await dbCreateGamePlayer(gameId, clientId, name);
         } catch (error) {
             if (isDatabaseError(error)) {
                 const kind = errorCodeName(error);

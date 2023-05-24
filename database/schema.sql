@@ -1,5 +1,12 @@
 -- Clean up existing database objects
 
+DROP TRIGGER IF EXISTS on_game_client_last_connected ON game_client;
+DROP TRIGGER IF EXISTS on_game_player_updated ON game_player;
+DROP TRIGGER IF EXISTS on_game_updated ON game;
+
+DROP FUNCTION IF EXISTS row_updated;
+DROP FUNCTION IF EXISTS update_game_client_last_connected;
+
 DROP TABLE IF EXISTS game_player;
 DROP TABLE IF EXISTS game_client;
 DROP TABLE IF EXISTS game_link;
@@ -12,23 +19,16 @@ DROP TABLE IF EXISTS game;
 CREATE EXTENSION "uuid-ossp";
 
 
--- Create database objects
+-- Create tables
 
 CREATE TABLE IF NOT EXISTS game (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     display_name TEXT DEFAULT '',
     phase TEXT DEFAULT 'setup',
-    created TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC')
+    created TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC'),
+    updated TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
--- This represents a someone participating in a game.
--- One client can support multiple players.
-CREATE TABLE IF NOT EXISTS game_player (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    game_id UUID REFERENCES game,
-    display_name TEXT NOT NULL,
-    UNIQUE(game_id, display_name)
-);
 
 CREATE TABLE IF NOT EXISTS game_history (
     game_id UUID REFERENCES game,
@@ -51,3 +51,50 @@ CREATE TABLE IF NOT EXISTS game_client (
     created TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC'),
     last_connected TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
+
+-- This represents a someone participating in a game.
+-- One client can support multiple players.
+CREATE TABLE IF NOT EXISTS game_player (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    game_id UUID REFERENCES game,
+    client_id UUID REFERENCES game_client,
+    display_name TEXT NOT NULL,
+    created TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC'),
+    updated TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC'),
+    UNIQUE(game_id, display_name)
+);
+
+
+-- Create triggers and trigger functions
+
+CREATE OR REPLACE FUNCTION row_updated()
+RETURNS TRIGGER
+LANGUAGE PLPGSQL
+AS $$
+    BEGIN
+        NEW.updated := (NOW() AT TIME ZONE 'UTC');
+        RETURN NEW;
+    END;
+$$;
+
+CREATE OR REPLACE TRIGGER on_game_player_updated
+BEFORE INSERT OR UPDATE ON game_player
+FOR EACH ROW EXECUTE FUNCTION row_updated();
+
+CREATE OR REPLACE TRIGGER on_game_updated
+BEFORE INSERT OR UPDATE ON game
+FOR EACH ROW EXECUTE FUNCTION row_updated();
+
+CREATE OR REPLACE FUNCTION update_game_client_last_connected()
+RETURNS TRIGGER
+LANGUAGE PLPGSQL
+AS $$
+    BEGIN
+        NEW.last_connected := (NOW() AT TIME ZONE 'UTC');
+        RETURN NEW;
+    END;
+$$;
+
+CREATE OR REPLACE TRIGGER on_game_client_last_connected
+BEFORE INSERT OR UPDATE ON game_client
+FOR EACH ROW EXECUTE FUNCTION update_game_client_last_connected();

@@ -4,6 +4,8 @@ interface TRGame {
     id: string;
     display_name: string;
     phase: "setup" | "play" | "complete";
+    created: string;
+    updated: string;
 }
 
 async function dbGetGame(gameId: string) {

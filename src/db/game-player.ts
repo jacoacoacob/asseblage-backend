@@ -3,7 +3,10 @@ import { pool } from "./pool";
 interface TRGamePlayer {
     id: string;
     game_id: string;
+    client_id: string;
     display_name: string;
+    created: string;
+    updated: string;
 }
 
 async function dbListGamePlayers(gameId: string) {
@@ -14,12 +17,12 @@ async function dbListGamePlayers(gameId: string) {
     return rows as TRGamePlayer[];
 }
 
-async function dbCreateGamePlayer(gameId: string, displayName: string) {
+async function dbCreateGamePlayer(gameId: string, clientId: string, displayName: string) {
     const { rows } = await pool.query(
-        `INSERT INTO game_player (game_id, display_name)
-              VALUES ($1, $2)
+        `INSERT INTO game_player (game_id, client_id, display_name)
+              VALUES ($1, $2, $3)
            RETURNING *`,
-        [gameId, displayName]
+        [gameId, clientId, displayName]
     );
 
     return rows[0] as TRGamePlayer;

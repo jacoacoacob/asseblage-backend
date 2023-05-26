@@ -3,7 +3,7 @@ import { assertAuthenticated } from "../io/assert-authenticated";
 import { IOContext } from "../io/types";
 import { findSession, updateSession, listActiveSessionsForGame, ServerSession } from "../session-store";
 import { resolveAndSend } from "./composed";
-import { errorCodeName, isDatabaseError } from "../db/utils";
+import { errorCodeKind, isDatabaseError } from "../db/utils";
 
 function registerGameEventHandlers(context: IOContext) {
     const { socket } = context;
@@ -16,11 +16,17 @@ function registerGameEventHandlers(context: IOContext) {
             player = await dbCreateGamePlayer(gameId, clientId, name);
         } catch (error) {
             if (isDatabaseError(error)) {
-                const kind = errorCodeName(error);
+                const kind = errorCodeKind(error);
                 if (kind === "unique_violation") {
-                    return acknowledge({ success: false, message: `Player with name ${name} already exists` });
+                    return acknowledge({
+                        success: false,
+                        message: `Player with name ${name} already exists`
+                    });
                 }
-                return acknowledge({ success: false, message: error.message });
+                return acknowledge({
+                    success: false,
+                    message: error.message
+                });
             }
             return acknowledge({ success: false });
         }
@@ -57,7 +63,24 @@ function registerGameEventHandlers(context: IOContext) {
             return;
         }
 
-        await dbUpdateGamePlayerDisplayName(playerId, name);
+        try {
+            await dbUpdateGamePlayerDisplayName(playerId, name);
+        } catch (error) {
+            if (isDatabaseError(error)) {
+                const kind = errorCodeKind(error);
+                if (kind === "unique_violation") {
+                    return acknowledge({
+                        success: false,
+                        message: `Player with name ${name} already exists`
+                    });
+                }
+                return acknowledge({
+                    success: false,
+                    message: error.message
+                });
+            }
+            return acknowledge({ success: false });
+        }
 
         await resolveAndSend(context, ["to_all", "game:players"]);
 

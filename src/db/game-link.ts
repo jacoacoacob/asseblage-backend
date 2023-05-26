@@ -4,6 +4,7 @@ interface TRGameLink {
     id: string;
     game_id: string;
     role: "guest" | "owner";
+    created: string;
 }
 
 async function dbCreateGameLink(gameId: string, role: TRGameLink["role"]) {
@@ -20,10 +21,23 @@ async function dbCreateGameLink(gameId: string, role: TRGameLink["role"]) {
     return rows[0] as TRGameLink | undefined;
 }
 
+async function dbListGameLinks(gameId: string) {
+    const { rows } = await pool.query(
+        "SELECT * FROM game_link WHERE game_id = $1",
+        [gameId]
+    );
+
+    return rows as TRGameLink[];
+}
+
 async function dbGetGameLink(id: string) {
-    const { rows } = await pool.query(`SELECT * FROM game_link WHERE id = $1`, [id]);
+    const { rows } = await pool.query(
+        "SELECT * FROM game_link WHERE id = $1",
+        [id]
+    );
 
     return rows[0] as TRGameLink | undefined;
 }
 
-export { dbCreateGameLink, dbGetGameLink };
+export { dbCreateGameLink, dbListGameLinks, dbGetGameLink };
+export type { TRGameLink };

@@ -1,11 +1,9 @@
 -- Clean up existing database objects
 
-DROP TRIGGER IF EXISTS on_game_client_last_connected ON game_client;
 DROP TRIGGER IF EXISTS on_game_player_updated ON game_player;
 DROP TRIGGER IF EXISTS on_game_updated ON game;
 
 DROP FUNCTION IF EXISTS row_updated;
-DROP FUNCTION IF EXISTS update_game_client_last_connected;
 
 DROP TABLE IF EXISTS game_player;
 DROP TABLE IF EXISTS game_client;
@@ -84,17 +82,3 @@ FOR EACH ROW EXECUTE FUNCTION row_updated();
 CREATE OR REPLACE TRIGGER on_game_updated
 BEFORE INSERT OR UPDATE ON game
 FOR EACH ROW EXECUTE FUNCTION row_updated();
-
-CREATE OR REPLACE FUNCTION update_game_client_last_connected()
-RETURNS TRIGGER
-LANGUAGE PLPGSQL
-AS $$
-    BEGIN
-        NEW.last_connected := (NOW() AT TIME ZONE 'UTC');
-        RETURN NEW;
-    END;
-$$;
-
-CREATE OR REPLACE TRIGGER on_game_client_last_connected
-BEFORE INSERT OR UPDATE ON game_client
-FOR EACH ROW EXECUTE FUNCTION update_game_client_last_connected();

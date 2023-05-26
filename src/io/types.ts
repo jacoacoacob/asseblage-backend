@@ -5,6 +5,7 @@ import { ServerSession, ClientSession } from "../session-store";
 import { TRGame } from "../db/game-meta";
 import { TRGamePlayer } from "../db/game-player";
 import type { TCGameHistoryEvent } from "../db/game-history";
+import { TRGameLink } from "../db/game-link";
 
 type MiddlewareNext = (err?: ExtendedError) => void;
 
@@ -36,6 +37,7 @@ interface ServerToClientEvents {
     "session:client_id": (data: ClientSession["clientId"]) => void;
     "session:all": (data: ClientSession[]) => void;
     "game:meta": (data: Pick<TRGame, "display_name" | "id" | "phase">) => void;
+    "game:links": (data: TRGameLink[]) => void;
     "game:history": (data: TCGameHistoryEvent[]) => void;
     "game:players": (data: TRGamePlayer[]) => void;
 }

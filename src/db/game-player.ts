@@ -10,9 +10,15 @@ interface TRGamePlayer {
 }
 
 async function dbListGamePlayers(gameId: string) {
-    const { rows } = await pool.query(
-        "SELECT * FROM game_player WHERE game_id = $1", [gameId]
-    );
+    const sql = `
+        SELECT *
+          FROM game_player
+         WHERE game_id = $1
+      ORDER BY created
+          DESC
+    `;
+
+    const { rows } = await pool.query(sql, [gameId]);
 
     return rows as TRGamePlayer[];
 }

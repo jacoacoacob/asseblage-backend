@@ -12,7 +12,7 @@ import { dbCreateGameHistory } from "../db/game-history";
  * body to request a client auth token.
  */
 async function handleCreateGame(req: Request, res: Response) {
-    const { id: gameId } = (await dbCreateGame())!;
+    const { id: gameId } = await dbCreateGame();
 
     const [ownerLink, guestLink, _] = await Promise.all([
         dbCreateGameLink(gameId, "owner"),

@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS game_client (
 CREATE TABLE IF NOT EXISTS game_player (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     game_id UUID REFERENCES game,
-    client_id UUID REFERENCES game_client,
+    created_by UUID REFERENCES game_client,
     display_name TEXT NOT NULL,
     created TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC'),
     updated TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC'),

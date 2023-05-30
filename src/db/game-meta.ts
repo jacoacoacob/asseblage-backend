@@ -17,7 +17,7 @@ async function dbGetGame(gameId: string) {
 async function dbCreateGame() {
     const { rows } = await pool.query("INSERT INTO game DEFAULT VALUES RETURNING *");
 
-    return rows[0] as TRGame | undefined;
+    return rows[0] as TRGame;
 }
 
 async function dbUpdateGameDisplayName(gameId: string, displayName: string) {

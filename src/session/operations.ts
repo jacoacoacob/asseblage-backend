@@ -1,26 +1,11 @@
-import type { RedisMultiQueuedCommand } from "@redis/client/dist/lib/multi-command";
-
 import { redisClient } from "../redis-client";
 import { serialiseSessionKeys, SESSION_META_KEY_PREFIX, SESSION_PLAYERS_KEY_PREFIX } from "./session-keys";
-import type { ServerSession, ClientSession, SessionKeyParams } from "./types";
-import { WatchError } from "redis";
-import { scanKeys } from "./utils";
+import type { SessionKeyParams } from "./types";
+import { scanKeys, deserializeSessionMetaData } from "./utils";
+import { ServerSession } from "../session-store";
 
-type Command = RedisMultiQueuedCommand;
 
 const EXPIRE_SESSION_TTL_SECONDS = 3;
-
-
-function _deserializeSessionMetaData(data: string[]) {
-    const [clientId, gameId, clientDisplayName, role, sockets] = data;
-    return {
-        clientId,
-        gameId,
-        clientDisplayName,
-        role,
-        sockets: sockets.split(",").filter(Boolean),
-    };
-}
 
 
 async function listGameSessions(gameId: string) {
@@ -29,49 +14,58 @@ async function listGameSessions(gameId: string) {
         scanKeys(SESSION_PLAYERS_KEY_PREFIX + ":" + gameId + "*"),
     ]);
 
-    const getSessionMeta: Command[] = metaKeys.map(
-        (key) => ({
-            args: [
-                "hmget",
-                key,
-                "clientId",
-                "gameId",
-                "clientDisplayName",
-                "role",
-                "sockets"
-            ],
-        })
-    );
-
-    const getSessionPlayers: Command[] = playerKeys.map(
-        (key) => ({ args: ["smembers", key] })
-    );
-
-    const [rawSessionMeta, sessionPlayers] = await Promise.all([
-        redisClient.multiExecutor(getSessionMeta),
-        redisClient.multiExecutor(getSessionPlayers),
+    const [rawMetaData, rawPlayersData] = await Promise.all([
+       redisClient.multiExecutor(
+            metaKeys.map((metaKey) => ({
+                args: [
+                    "HMGET",
+                    metaKey,
+                    "clientId",
+                    "gameId",
+                    "clientDisplayName",
+                    "role",
+                    "sockets"
+                ]
+            }))
+        ),
+        redisClient.multiExecutor(
+            playerKeys.map((playerKey) => ({
+                args: [
+                    "SMEMBERS",
+                    playerKey
+                ],
+            }))
+        ),
     ]);
+
+    // Use object to map results together. Don't assume values
+    // at a given index in two different result arrays corrospond 
+    // to the same session
+
+    const sessions: Record<string, ServerSession> = {};
+
+    for (let i = 0; i < metaKeys.length; i++) {
+        const [_, universalKey] = metaKeys[i].split(":");
+        sessions[universalKey] = {
+            playerIds: [],
+            ...deserializeSessionMetaData(rawMetaData[i] as string[]),
+        };
+    }
+
+    for (let i = 0; i < playerKeys.length; i++) {
+        const [_, universalKey] = playerKeys[i].split(":");
+        sessions[universalKey].playerIds = rawPlayersData[i] as string[];
+    }
     
-    const sessionMeta = rawSessionMeta.map(
-        (data) => _deserializeSessionMetaData(data as string[])
-    );
-
-
-    return [];
+    return Object.values(sessions);
 }
 
 
-async function findSession(params: SessionKeyParams) {
+async function getSession(params: SessionKeyParams) {
     const { sessionMetaKey, sessionPlayersKey } = serialiseSessionKeys(params);
 
 
 }
-
-
-async function saveSessionMeta() {
-
-}
-
 
 
 

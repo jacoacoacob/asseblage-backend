@@ -1,4 +1,6 @@
 import { redisClient } from "../redis-client";
+import type { ServerSession } from "../session-store";
+
 
 async function scanKeys(pattern: string) {
     const keys = new Set<string>();
@@ -18,4 +20,16 @@ async function scanKeys(pattern: string) {
     return Array.from(keys);
 }
 
-export { scanKeys };
+
+function deserializeSessionMetaData(data: string[]) {
+    const [clientId, gameId, clientDisplayName, role, sockets] = data;
+    return {
+        clientId,
+        gameId,
+        clientDisplayName,
+        role: role as ServerSession["role"],
+        sockets: sockets.split(",").filter(Boolean),
+    };
+}
+
+export { scanKeys, deserializeSessionMetaData };

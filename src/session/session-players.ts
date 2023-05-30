@@ -1,10 +1,9 @@
 import { WatchError } from "redis";
-import type { RedisMultiQueuedCommand } from "@redis/client/dist/lib/multi-command";
 
 import { redisClient } from "../redis-client";
 import { serialiseSessionKeys, SESSION_PLAYERS_KEY_PREFIX } from "./session-keys";
-import type { SessionKeyParams } from "./types";
 import { scanKeys } from "./utils";
+import type { SessionKeyParams } from "./types";
 
 
 interface AddSessionPlayersParams extends SessionKeyParams {
@@ -34,39 +33,27 @@ async function addSessionPlayer(params: AddSessionPlayersParams) {
 
                 // all operations in the transation will fail if any watched keys
                 // are modified during the transaction 
-                await client.watch(filteredKeys);
+                await client.WATCH(filteredKeys);
 
-                // // check if player is already claimed
-                // const isPlayerClaimedCommands: Command[] = keys.map(
-                //     (key) => ({
-                //         args: ["sismember", key, playerId]
-                //     })
-                // );
-
-                // const isPlayerClaimedResults = await client.multiExecutor(isPlayerClaimedCommands);
-
-                // if (isPlayerClaimedResults.some((result) => Boolean(result))) {
-                //     // playerId has already been claimed by another client
-                //     return false;
-                // }
-
-                const isPlayerClaimedMulti = client.multi();
+                const isPlayerClaimedMulti = client.MULTI();
 
                 keys.forEach((key) => {
-                    isPlayerClaimedMulti.sIsMember(key, playerId);
+                    isPlayerClaimedMulti.SISMEMBER(key, playerId);
                 });
 
-                const isPlayerClaimedResults = await isPlayerClaimedMulti.exec();
+                const isPlayerClaimedResults = await isPlayerClaimedMulti.EXEC();
 
                 if (isPlayerClaimedResults.some((result) => Boolean(result))) {
                     // playerId has already been claimed by another client
                     return false;
                 }
 
+                await client.WATCH(filteredKeys);
+
                 await client
-                    .multi()
-                    .sAdd(sessionPlayersKey, playerId)
-                    .exec();
+                    .MULTI()
+                    .SADD(sessionPlayersKey, playerId)
+                    .EXEC();
 
                 return true;
             });
@@ -93,10 +80,17 @@ interface RemoveSessionPlayersParams extends SessionKeyParams {
     playerIds: string[];
 }
 
+
 async function removeSessionPlayers(params: RemoveSessionPlayersParams) {
     const { clientId, gameId, playerIds } = params;
 
-    
+    const { sessionPlayersKey } = serialiseSessionKeys({ clientId, gameId });
+
+    try {
+        await redisClient.sRem(sessionPlayersKey, playerIds);
+    } catch (error) {
+        console.error("[removeSessionPlayers]", error);   
+    }
 }
 
 

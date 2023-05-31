@@ -1,5 +1,5 @@
 import { redisClient } from "../redis-client";
-import { ServerSession } from "../session-store";
+import { ServerSession } from "./types";
 import { serialiseSessionKeys } from "./session-keys";
 
 
@@ -42,7 +42,7 @@ async function updateSessionMeta(params: UpdateSessionMetaParams) {
         []
     );
 
-    return await redisClient
+    await redisClient
         .MULTI()
         .HSET(sessionMetaKey, hSetArgs)
         .PERSIST(sessionMetaKey)

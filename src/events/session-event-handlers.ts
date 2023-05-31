@@ -1,7 +1,7 @@
 import { dbUpdateClientDisplayName } from "../db/game-client";
 import { assertAuthenticated } from "../io/assert-authenticated";
 import { IOContext } from "../io/types";
-import * as sessionStore from "../session-store";
+import { updateSessionMeta, addSessionPlayer } from "../session-store";
 import { resolveAndSend } from "./composed";
 
 function registerSessionEventHandlers(context: IOContext) {
@@ -18,7 +18,7 @@ function registerSessionEventHandlers(context: IOContext) {
         if (updatedClient) {
             const { display_name: clientDisplayName } = updatedClient;
 
-            await sessionStore.updateSession({
+            await updateSessionMeta({
                 clientId,
                 gameId,
                 clientDisplayName,
@@ -28,11 +28,12 @@ function registerSessionEventHandlers(context: IOContext) {
         }
     });
 
-    socket.on("session:claim_player", (playerId) => {
+    socket.on("session:claim_player", async (playerId) => {
         const { clientId, gameId } = assertAuthenticated(socket);
 
-        // 1. verify that the playerId has not been claimed by anyone else
-        // 2. update the appropriate session's playerIds list to include playerId
+        await addSessionPlayer({ clientId, gameId, playerId });
+
+        await resolveAndSend(context, ["to_all", "session:all"]);
     });
 }
 

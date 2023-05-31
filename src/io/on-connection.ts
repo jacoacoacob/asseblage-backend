@@ -7,9 +7,6 @@ import type { IOContext, IOServer, IOServerSocket } from "./types";
 import { registerResolvers, resolveAndSend } from "../events/composed";
 
 function makeConnectionHandler(io: IOServer) {
-
-    makeSessionExpiredHandler(io);
-
     return async (socket: IOServerSocket) => {        
         const { data: { session } } = socket;
         
@@ -20,6 +17,8 @@ function makeConnectionHandler(io: IOServer) {
         const { gameId } = session;
 
         const context: IOContext = { io, socket, gameRoom: `game:${gameId}` };
+
+        makeSessionExpiredHandler(context);
 
         socket.join(context.gameRoom);
 

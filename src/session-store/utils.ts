@@ -1,5 +1,5 @@
 import { redisClient } from "../redis-client";
-import type { ServerSession } from "../session-store";
+import type { ServerSession } from "./types";
 
 
 async function scanKeys(pattern: string) {

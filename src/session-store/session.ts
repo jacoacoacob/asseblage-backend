@@ -1,8 +1,7 @@
 import { redisClient } from "../redis-client";
 import { serialiseSessionKeys, SESSION_META_KEY_PREFIX, SESSION_PLAYERS_KEY_PREFIX } from "./session-keys";
-import type { SessionKeyParams } from "./types";
+import type { ServerSession, SessionKeyParams } from "./types";
 import { scanKeys, deserializeSessionMetaData } from "./utils";
-import { ServerSession } from "../session-store";
 import { SESSION_META_HM_FIELDS } from "./session-meta";
 
 
@@ -58,13 +57,17 @@ async function listSessions(gameId: string) {
 }
 
 
-async function getSession(params: SessionKeyParams): Promise<ServerSession> {
+async function getSession(params: SessionKeyParams): Promise<ServerSession | undefined> {
     const { sessionMetaKey, sessionPlayersKey } = serialiseSessionKeys(params);
 
     const [rMetaData, rPlayerIds] = await Promise.all([
         redisClient.HMGET(sessionMetaKey, SESSION_META_HM_FIELDS),
         redisClient.SMEMBERS(sessionPlayersKey),
     ]);
+
+    if (rMetaData.filter(Boolean).length === 0) {
+        return;
+    }
 
     return {
         ...deserializeSessionMetaData(rMetaData),

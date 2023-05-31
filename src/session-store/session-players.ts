@@ -25,15 +25,19 @@ async function addSessionPlayer(params: AddSessionPlayersParams) {
         // https://github.com/redis/node-redis/blob/master/docs/isolated-execution.md#transactions
         try {
             return await redisClient.executeIsolated(async (client) => {
-                const gameIdPattern = SESSION_PLAYERS_KEY_PREFIX + ":" + gameId;
+                const gameIdPattern = SESSION_PLAYERS_KEY_PREFIX + ":" + gameId + "*";
                 
                 const keys = await scanKeys(gameIdPattern);
                 
                 const filteredKeys = keys.filter((key) => key !== sessionPlayersKey);
 
+                console.log({ keys, filteredKeys })
+
                 // all operations in the transation will fail if any watched keys
                 // are modified during the transaction 
-                await client.WATCH(filteredKeys);
+                if (filteredKeys.length > 0) {
+                    await client.WATCH(filteredKeys);
+                }
 
                 const isPlayerClaimedMulti = client.MULTI();
 
@@ -48,7 +52,9 @@ async function addSessionPlayer(params: AddSessionPlayersParams) {
                     return false;
                 }
 
-                await client.WATCH(filteredKeys);
+                if (filteredKeys.length > 0) {
+                    await client.WATCH(filteredKeys);
+                }
 
                 await client
                     .MULTI()
@@ -87,7 +93,7 @@ async function removeSessionPlayers(params: RemoveSessionPlayersParams) {
     const { sessionPlayersKey } = serialiseSessionKeys({ clientId, gameId });
 
     try {
-        await redisClient.sRem(sessionPlayersKey, playerIds);
+        await redisClient.SREM(sessionPlayersKey, playerIds);
     } catch (error) {
         console.error("[removeSessionPlayers]", error);   
     }

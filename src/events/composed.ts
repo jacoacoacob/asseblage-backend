@@ -1,7 +1,7 @@
 import { dbListGameHistoryEvents } from "../db/game-history";
 import { dbGetGame } from "../db/game-meta";
 import { dbListGamePlayers } from "../db/game-player";
-import { listActiveClientSessionsForGame } from "../session-store";
+import { listSessions } from "../session-store";
 import type { IOContext, ServerToClientEvents } from "../io/types";
 import { dbListGameLinks } from "../db/game-link";
 
@@ -54,7 +54,8 @@ function registerResolvers({ socket }: IOContext) {
             return await dbListGamePlayers(session.gameId);
         },
         "session:all": async () => {
-            return await listActiveClientSessionsForGame(session.gameId);
+            const sessions = await listSessions(session.gameId);
+            return sessions.map(({ sockets, ...session }) => session);
         },
         "session:client_id": async () => {
             return session.clientId;

@@ -1,4 +1,4 @@
-import type { ServerSession } from "../session-store";
+import type { ServerSession } from "../session-store/types";
 import type { IOServerSocket } from "./types";
 
 function assertAuthenticated(socket: IOServerSocket): ServerSession {

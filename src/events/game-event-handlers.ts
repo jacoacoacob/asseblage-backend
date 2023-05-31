@@ -1,7 +1,7 @@
 import { dbCreateGamePlayer, dbDeleteGamePlayer, dbUpdateGamePlayerDisplayName } from "../db/game-player";
 import { assertAuthenticated } from "../io/assert-authenticated";
 import { IOContext } from "../io/types";
-import { findSession, updateSession, listActiveSessionsForGame, ServerSession } from "../session-store";
+import {  addSessionPlayer, removeSessionPlayers, listSessions } from "../session-store";
 import { resolveAndSend } from "./composed";
 import { errorCodeKind, isDatabaseError } from "../db/utils";
 
@@ -32,20 +32,7 @@ function registerGameEventHandlers(context: IOContext) {
         }
 
         if (assignToSender) {
-            const session = await findSession({ clientId, gameId });
-
-            if (!session) {
-                console.error("No session");
-                return;
-            }
-
-            await updateSession({
-                ...session,
-                playerIds: [
-                    ...session.playerIds,
-                    player.id
-                ],
-            });
+            await addSessionPlayer({ clientId, gameId, playerId: player.id });
 
             resolveAndSend(context, ["to_all", "session:all"]);
         }
@@ -95,16 +82,24 @@ function registerGameEventHandlers(context: IOContext) {
             return;
         }
 
-        const sessions = await listActiveSessionsForGame(gameId);
+        const sessions = await listSessions(gameId);
 
         await Promise.all(
-            sessions.reduce((accum: Promise<ServerSession>[], session) => {
-                const indexOfPlayerId = session.playerIds.indexOf(playerId);
+            sessions.reduce((accum: Promise<void>[], session) => {
+                const { clientId, gameId, playerIds } = session;
+
+                const indexOfPlayerId = playerIds.indexOf(playerId);
+
                 if (indexOfPlayerId > -1) {
                     session.playerIds.splice(indexOfPlayerId, 1);
     
-                    accum.push(updateSession(session));
+                    accum.push(removeSessionPlayers({
+                        clientId,
+                        gameId,
+                        playerIds: [playerId],
+                    }));
                 }
+
                 return accum;
             }, [])
         );

@@ -1,7 +1,8 @@
 import type { IOServer, IOServerSocket, MiddlewareNext } from "./types";
-import * as sessionStore from "../session-store";
+import { getSession, updateSessionMeta } from "../session-store";
 import { dbCreateGameClient, dbGetGameClient } from "../db/game-client";
 import { dbGetGameLink } from "../db/game-link";
+import { ServerSession } from "../session-store/types";
 
 interface AuthPayload {
     gameLinkId?: string;
@@ -82,31 +83,36 @@ function makeIOSessionMiddleware(io: IOServer) {
         try {
             const { role, gameId, clientId, clientDisplayName } = await authenticate(socket);
     
-            const session = await sessionStore.findSession({ clientId, gameId });
+            const session = await getSession({ clientId, gameId });
     
             if (session) {
                 // Get the IDs of all currently connected sockets so that...
                 const allSocketIds = (await io.fetchSockets()).map((socket) => socket.id);
 
-                socket.data.session = await sessionStore.saveSession({
-                    ...session,
-                    sockets: session.sockets
-                        // ...we can remove any closed socket IDs that weren't removed
-                        // from redis becuase their sockets closed as a result of an
-                        // Express app restart and not one handled by onDisconnect
-                        .filter((socketId) => allSocketIds.includes(socketId))
-                        // Then, add the current socket ID to redis
-                        .concat(socket.id),
-                });
+                session.sockets = session.sockets
+                    // ...we can remove any closed socket IDs that weren't removed
+                    // from redis becuase their sockets closed as a result of an
+                    // Express app restart and not one handled by onDisconnect
+                    .filter((socketId) => allSocketIds.includes(socketId))
+                    // Then, add the current socket ID to redis
+                    .concat(socket.id);
+
+                await updateSessionMeta(session);
+
+                socket.data.session = session;
             } else {
-                socket.data.session = await sessionStore.saveSession({
+                const session: ServerSession = {
                     clientId,
                     clientDisplayName,
                     gameId,
                     role,
                     sockets: [socket.id],
                     playerIds: [],
-                });
+                };
+
+                await updateSessionMeta(session);
+
+                socket.data.session = session;
             }
     
         } catch (error) {

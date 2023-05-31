@@ -1,7 +1,7 @@
 import { createClient } from "redis";
 
-import * as sessionStore from "./session-store";
-import type { IOServer } from "./io/types";
+import type { IOContext } from "./io/types";
+import { resolveAndSend } from "./events/composed";
 
 const redisClient = createClient({
     url: process.env.REDIS_URL,
@@ -30,16 +30,13 @@ const subscriber = redisClient.duplicate();
 
 subscriber.connect().catch(console.error);
 
-function makeSessionExpiredHandler(io: IOServer) {
-    subscriber.subscribe("__keyevent@0__:expired", async (key) => {
-        const { gameId } = sessionStore.deserializeSessionKey(key);
-
-        const sessions = await sessionStore.listActiveSessionsForGame(gameId);
-
-        const clients = sessions.map(sessionStore.mapClientSession);
-
-        io.to(`game:${gameId}`).emit("session:all", clients);
-    });
+function makeSessionExpiredHandler(context: IOContext) {
+    subscriber.subscribe(
+        "__keyevent@0__:expired",
+        async () => {
+            resolveAndSend(context, ["to_all", "session:all"]);
+        }
+    );
 }
 
 export { redisClient, makeSessionExpiredHandler };

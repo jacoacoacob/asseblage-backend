@@ -1,7 +1,8 @@
 
-import type { BroadcastOperator, Server, Socket } from "socket.io";
+import type { Server, Socket } from "socket.io";
 import type { ExtendedError } from "socket.io/dist/namespace";
-import { ServerSession, ClientSession } from "../session-store";
+
+import { ServerSession, ClientSession } from "../session-store/types";
 import { TRGame } from "../db/game-meta";
 import { TRGamePlayer } from "../db/game-player";
 import type { TCGameHistoryEvent } from "../db/game-history";

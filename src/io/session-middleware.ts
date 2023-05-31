@@ -1,8 +1,10 @@
 import type { IOServer, IOServerSocket, MiddlewareNext } from "./types";
-import { getSession, updateSessionMeta } from "../session-store";
+import { addSessionPlayer, getSession, updateSessionMeta } from "../session-store";
 import { dbCreateGameClient, dbGetGameClient } from "../db/game-client";
 import { dbGetGameLink } from "../db/game-link";
 import { ServerSession } from "../session-store/types";
+import { redisClient } from "../redis-client";
+import { persistSession } from "../session-store/session";
 
 interface AuthPayload {
     gameLinkId?: string;
@@ -115,6 +117,8 @@ function makeIOSessionMiddleware(io: IOServer) {
                 socket.data.session = session;
             }
     
+            await persistSession({ clientId, gameId });
+
         } catch (error) {
             console.error(error);
             return next(new Error("Internal Server Error"));

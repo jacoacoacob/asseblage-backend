@@ -31,7 +31,7 @@ async function addSessionPlayer(params: AddSessionPlayersParams) {
                 
                 const filteredKeys = keys.filter((key) => key !== sessionPlayersKey);
 
-                console.log({ keys, filteredKeys })
+                console.log("[addSessionPlayer]", { keys, filteredKeys })
 
                 // all operations in the transation will fail if any watched keys
                 // are modified during the transaction 
@@ -42,7 +42,8 @@ async function addSessionPlayer(params: AddSessionPlayersParams) {
                 const isPlayerClaimedMulti = client.MULTI();
 
                 keys.forEach((key) => {
-                    isPlayerClaimedMulti.SISMEMBER(key, playerId);
+                    // isPlayerClaimedMulti.SISMEMBER(key, playerId);
+                    isPlayerClaimedMulti.HEXISTS(key, playerId);
                 });
 
                 const isPlayerClaimedResults = await isPlayerClaimedMulti.EXEC();
@@ -58,7 +59,8 @@ async function addSessionPlayer(params: AddSessionPlayersParams) {
 
                 await client
                     .MULTI()
-                    .SADD(sessionPlayersKey, playerId)
+                    .HSET(sessionPlayersKey, [playerId, "1"])
+                    .PERSIST(sessionPlayersKey)
                     .EXEC();
 
                 return true;
@@ -93,7 +95,8 @@ async function removeSessionPlayers(params: RemoveSessionPlayersParams) {
     const { sessionPlayersKey } = serialiseSessionKeys({ clientId, gameId });
 
     try {
-        await redisClient.SREM(sessionPlayersKey, playerIds);
+        // await redisClient.SREM(sessionPlayersKey, playerIds);
+        await redisClient.HDEL(sessionPlayersKey, playerIds);
     } catch (error) {
         console.error("[removeSessionPlayers]", error);   
     }

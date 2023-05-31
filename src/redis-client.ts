@@ -33,7 +33,8 @@ subscriber.connect().catch(console.error);
 function makeSessionExpiredHandler(context: IOContext) {
     subscriber.subscribe(
         "__keyevent@0__:expired",
-        async () => {
+        async (key) => {
+            console.log("[__keyevent@0__:expired]", key);
             resolveAndSend(context, ["to_all", "session:all"]);
         }
     );

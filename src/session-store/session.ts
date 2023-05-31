@@ -5,7 +5,7 @@ import { scanKeys, deserializeSessionMetaData } from "./utils";
 import { SESSION_META_HM_FIELDS } from "./session-meta";
 
 
-const EXPIRE_SESSION_TTL_SECONDS = 3;
+const EXPIRE_SESSION_TTL_SECONDS = 5;
 
 
 async function listSessions(gameId: string) {
@@ -27,7 +27,7 @@ async function listSessions(gameId: string) {
         redisClient.multiExecutor(
             playerKeys.map((playerKey) => ({
                 args: [
-                    "SMEMBERS",
+                    "HKEYS",
                     playerKey
                 ],
             }))
@@ -35,7 +35,7 @@ async function listSessions(gameId: string) {
     ]);
 
     // Use object to map results together. Don't assume values
-    // at a given index in two different result arrays corrospond 
+    // at a given index in two different result arrays correspond 
     // to the same session
 
     const sessions: Record<string, ServerSession> = {};
@@ -62,7 +62,7 @@ async function getSession(params: SessionKeyParams): Promise<ServerSession | und
 
     const [rMetaData, rPlayerIds] = await Promise.all([
         redisClient.HMGET(sessionMetaKey, SESSION_META_HM_FIELDS),
-        redisClient.SMEMBERS(sessionPlayersKey),
+        redisClient.HKEYS(sessionPlayersKey),
     ]);
 
     if (rMetaData.filter(Boolean).length === 0) {
@@ -71,8 +71,19 @@ async function getSession(params: SessionKeyParams): Promise<ServerSession | und
 
     return {
         ...deserializeSessionMetaData(rMetaData),
-        playerIds: rPlayerIds
+        playerIds: rPlayerIds,
     };
+}
+
+
+async function persistSession(params: SessionKeyParams) {
+    const { sessionMetaKey, sessionPlayersKey } = serialiseSessionKeys(params);
+
+    await redisClient
+        .MULTI()
+        .PERSIST(sessionMetaKey)
+        .PERSIST(sessionPlayersKey)
+        .EXEC();
 }
 
 
@@ -80,11 +91,11 @@ async function expireSession({ clientId, gameId }: SessionKeyParams) {
     const { sessionMetaKey, sessionPlayersKey } = serialiseSessionKeys({ clientId, gameId });
 
     await redisClient
-        .multi()
-        .expire(sessionMetaKey, EXPIRE_SESSION_TTL_SECONDS)
-        .expire(sessionPlayersKey, EXPIRE_SESSION_TTL_SECONDS)
-        .exec();
+        .MULTI()
+        .EXPIRE(sessionMetaKey, EXPIRE_SESSION_TTL_SECONDS)
+        .EXPIRE(sessionPlayersKey, EXPIRE_SESSION_TTL_SECONDS)
+        .EXEC();
 }
 
 
-export { listSessions, getSession, expireSession };
+export { listSessions, getSession, expireSession, persistSession };

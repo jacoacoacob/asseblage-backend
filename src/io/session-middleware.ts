@@ -85,7 +85,7 @@ function makeIOSessionMiddleware(io: IOServer) {
         try {
             const { role, gameId, clientId, clientDisplayName } = await authenticate(socket);
     
-            const session = await getSession({ clientId, gameId });
+            let session = await getSession({ clientId, gameId });
     
             if (session) {
                 // Get the IDs of all currently connected sockets so that...
@@ -98,12 +98,8 @@ function makeIOSessionMiddleware(io: IOServer) {
                     .filter((socketId) => allSocketIds.includes(socketId))
                     // Then, add the current socket ID to redis
                     .concat(socket.id);
-
-                await updateSessionMeta(session);
-
-                socket.data.session = session;
             } else {
-                const session: ServerSession = {
+                session = {
                     clientId,
                     clientDisplayName,
                     gameId,
@@ -111,13 +107,13 @@ function makeIOSessionMiddleware(io: IOServer) {
                     sockets: [socket.id],
                     playerIds: [],
                 };
-
-                await updateSessionMeta(session);
-
-                socket.data.session = session;
             }
-    
+            
+            await updateSessionMeta(session);
+            
             await persistSession({ clientId, gameId });
+            
+            socket.data.session = session;
 
         } catch (error) {
             console.error(error);

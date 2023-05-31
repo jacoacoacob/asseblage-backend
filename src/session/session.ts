@@ -3,12 +3,13 @@ import { serialiseSessionKeys, SESSION_META_KEY_PREFIX, SESSION_PLAYERS_KEY_PREF
 import type { SessionKeyParams } from "./types";
 import { scanKeys, deserializeSessionMetaData } from "./utils";
 import { ServerSession } from "../session-store";
+import { SESSION_META_HM_FIELDS } from "./session-meta";
 
 
 const EXPIRE_SESSION_TTL_SECONDS = 3;
 
 
-async function listGameSessions(gameId: string) {
+async function listSessions(gameId: string) {
     const [metaKeys, playerKeys] = await Promise.all([
         scanKeys(SESSION_META_KEY_PREFIX + ":" + gameId + "*"),
         scanKeys(SESSION_PLAYERS_KEY_PREFIX + ":" + gameId + "*"),
@@ -20,11 +21,7 @@ async function listGameSessions(gameId: string) {
                 args: [
                     "HMGET",
                     metaKey,
-                    "clientId",
-                    "gameId",
-                    "clientDisplayName",
-                    "role",
-                    "sockets"
+                    ...SESSION_META_HM_FIELDS
                 ]
             }))
         ),
@@ -61,12 +58,19 @@ async function listGameSessions(gameId: string) {
 }
 
 
-async function getSession(params: SessionKeyParams) {
+async function getSession(params: SessionKeyParams): Promise<ServerSession> {
     const { sessionMetaKey, sessionPlayersKey } = serialiseSessionKeys(params);
 
+    const [rMetaData, rPlayerIds] = await Promise.all([
+        redisClient.HMGET(sessionMetaKey, SESSION_META_HM_FIELDS),
+        redisClient.SMEMBERS(sessionPlayersKey),
+    ]);
 
+    return {
+        ...deserializeSessionMetaData(rMetaData),
+        playerIds: rPlayerIds
+    };
 }
-
 
 
 async function expireSession({ clientId, gameId }: SessionKeyParams) {
@@ -80,4 +84,4 @@ async function expireSession({ clientId, gameId }: SessionKeyParams) {
 }
 
 
-export { listGameSessions, expireSession };
+export { listSessions, getSession, expireSession };

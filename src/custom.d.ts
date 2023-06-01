@@ -7,11 +7,3 @@ declare module "http" {
         session: Session;
     }
 }
-
-declare namespace Express {
-    export interface User {
-        username: string;
-        id: string;
-    }
-}
-

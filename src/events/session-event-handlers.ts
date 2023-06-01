@@ -1,7 +1,7 @@
 import { dbUpdateClientDisplayName } from "../db/game-client";
 import { assertAuthenticated } from "../io/assert-authenticated";
 import { IOContext } from "../io/types";
-import { updateSessionMeta, addSessionPlayer } from "../session-store";
+import { updateSessionMeta, addSessionPlayer, removeSessionPlayers } from "../session-store";
 import { resolveAndSend } from "./composed";
 
 function registerSessionEventHandlers(context: IOContext) {
@@ -28,10 +28,22 @@ function registerSessionEventHandlers(context: IOContext) {
         }
     });
 
-    socket.on("session:claim_player", async (playerId) => {
+    socket.on("session:claim_player", async ({ playerId }) => {
         const { clientId, gameId } = assertAuthenticated(socket);
 
         await addSessionPlayer({ clientId, gameId, playerId });
+
+        await resolveAndSend(context, ["to_all", "session:all"]);
+    });
+
+    socket.on("session:unclaim_player", async ({ playerId }) => {
+        const { clientId, gameId } = assertAuthenticated(socket);
+
+        await removeSessionPlayers({
+            clientId,
+            gameId,
+            playerIds: [playerId]
+        });
 
         await resolveAndSend(context, ["to_all", "session:all"]);
     });

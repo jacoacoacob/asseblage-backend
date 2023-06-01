@@ -24,7 +24,8 @@ type ReceiveWithAck<Data> = (data: Data, ack: Ack) => void;
 
 interface ClientToServerEvents {
     "session:set_client_display_name": (name: string) => void;
-    "session:claim_player": (playerId: string) => void;
+    "session:claim_player": (data: { playerId: string }) => void;
+    "session:unclaim_player": (data: { playerId: string }) => void;
     "game:start": () => void;
     "game:end": () => void;
     "game:set_display_name": (name: string) => void;

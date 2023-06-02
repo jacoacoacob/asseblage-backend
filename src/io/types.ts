@@ -19,8 +19,8 @@ type Ack<IsSender extends boolean = false> = IsSender extends true
     ? (...args: [Error | null, AckPayload]) => void
     : (...args: [AckPayload]) => void;
 
-type EmitWithAck<Data> = (data: Data, ack: Ack<true>) => void;
-type ReceiveWithAck<Data> = (data: Data, ack: Ack) => void;
+type EmitWithAck<Data = {}> = (data: Data, ack: Ack<true>) => void;
+type ReceiveWithAck<Data = {}> = (data: Data, ack: Ack) => void;
 
 interface ClientToServerEvents {
     "session:set_client_display_name": (name: string) => void;

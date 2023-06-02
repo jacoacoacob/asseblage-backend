@@ -25,7 +25,7 @@ async function updateSessionMeta(params: UpdateSessionMetaParams) {
 
     const { sessionMetaKey } = serialiseSessionKeys({ clientId, gameId });
 
-    const hSetArgs = SESSION_META_HM_FIELDS.reduce(
+    const sessionMetaArgs = SESSION_META_HM_FIELDS.reduce(
         (accum: string[], field) => {
             const value = params[field];
 
@@ -44,7 +44,7 @@ async function updateSessionMeta(params: UpdateSessionMetaParams) {
 
     await redisClient
         .MULTI()
-        .HSET(sessionMetaKey, hSetArgs)
+        .HSET(sessionMetaKey, sessionMetaArgs)
         .PERSIST(sessionMetaKey)
         .EXEC();
 }

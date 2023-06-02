@@ -42,7 +42,6 @@ async function addSessionPlayer(params: AddSessionPlayersParams) {
                 const isPlayerClaimedMulti = client.MULTI();
 
                 keys.forEach((key) => {
-                    // isPlayerClaimedMulti.SISMEMBER(key, playerId);
                     isPlayerClaimedMulti.HEXISTS(key, playerId);
                 });
 

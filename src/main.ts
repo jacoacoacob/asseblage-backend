@@ -11,31 +11,39 @@ import { api } from "./api/routes";
 import { getEnv } from "./utils";
 import { makeConnectionHandler } from "./io/on-connection";
 import { makeIOSessionMiddleware } from "./io/session-middleware";
+import { pruneSessions } from "./session-pruner";
 
-const PORT = getEnv("PORT", 3000);
-const ALLOWED_ORIGINS = getEnv("ALLOWED_ORIGINS", "").split(",");
+(async () => {
+    const PORT = getEnv("PORT", 3000);
+    const ALLOWED_ORIGINS = getEnv("ALLOWED_ORIGINS", "").split(",");
+    
+    const app = express();
+    
+    const httpServer = http.createServer(app);
+    
+    app.use(cors());
+    app.use(express.json());
+    
+    app.use("/api", api);
+    
+    const io = new Server(httpServer, {
+        cors: {
+            origin: ALLOWED_ORIGINS,
+        }
+    });
+    
+    io.engine.use(cors());
+    
+    io.use(makeIOSessionMiddleware(io));
+    
+    io.on("connection", makeConnectionHandler(io));
 
-const app = express();
-
-const httpServer = http.createServer(app);
-
-app.use(cors());
-app.use(express.json());
-
-app.use("/api", api);
-
-const io = new Server(httpServer, {
-    cors: {
-        origin: ALLOWED_ORIGINS,
-    }
-});
-
-io.engine.use(cors());
-
-io.use(makeIOSessionMiddleware(io));
-
-io.on("connection", makeConnectionHandler(io));
-
-httpServer.listen(PORT, () => {
-    console.log("Server listening on port:", PORT);
-});
+    // if clients disconnected while the server was down,
+    // invoking `pruneSessions` should expire their session
+    // entries in redis
+    pruneSessions(io);
+    
+    httpServer.listen(PORT, () => {
+        console.log("Server listening on port:", PORT);
+    });
+})();

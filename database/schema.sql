@@ -1,6 +1,7 @@
 -- Clean up existing database objects
 
 DROP TRIGGER IF EXISTS on_game_player_updated ON game_player;
+DROP TRIGGER IF EXISTS on_game_history_updated ON game_history;
 DROP TRIGGER IF EXISTS on_game_updated ON game;
 
 DROP FUNCTION IF EXISTS row_updated;
@@ -30,7 +31,8 @@ CREATE TABLE IF NOT EXISTS game (
 
 CREATE TABLE IF NOT EXISTS game_history (
     game_id UUID REFERENCES game,
-    events JSONB[]
+    events JSONB[],
+    updated TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'UTC')
 );
 
 CREATE TABLE IF NOT EXISTS game_link (
@@ -81,4 +83,8 @@ FOR EACH ROW EXECUTE FUNCTION row_updated();
 
 CREATE OR REPLACE TRIGGER on_game_updated
 BEFORE INSERT OR UPDATE ON game
+FOR EACH ROW EXECUTE FUNCTION row_updated();
+
+CREATE OR REPLACE TRIGGER on_game_history_updated
+BEFORE INSERT OR UPDATE ON game_history
 FOR EACH ROW EXECUTE FUNCTION row_updated();

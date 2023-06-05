@@ -5,7 +5,7 @@ import type { ExtendedError } from "socket.io/dist/namespace";
 import { ServerSession, ClientSession } from "../session-store/types";
 import { TRGame } from "../db/game-meta";
 import { TRGamePlayer } from "../db/game-player";
-import type { TCGameHistoryEvent } from "../db/game-history";
+import type { TCGameHistoryEvent, TRGameHistory } from "../db/game-history";
 import { TRGameLink } from "../db/game-link";
 
 type MiddlewareNext = (err?: ExtendedError) => void;
@@ -35,14 +35,27 @@ interface ClientToServerEvents {
     "game:event": (event: TCGameHistoryEvent ) => void;
 }
 
-interface ServerToClientEvents {
+interface ResolvableServerToClientEvents {
     "session:client_id": (data: ClientSession["clientId"]) => void;
     "session:all": (data: ClientSession[]) => void;
     "game:meta": (data: Pick<TRGame, "display_name" | "id" | "phase">) => void;
     "game:links": (data: TRGameLink[]) => void;
-    "game:history": (data: TCGameHistoryEvent[]) => void;
     "game:players": (data: TRGamePlayer[]) => void;
+    "game_history:events": (data: TCGameHistoryEvent[]) => void;
+    "game_history:updated": (data: string) => void;
 }
+
+
+
+interface PassThroughServerToClientEvents {
+    "game_history:events:append": (data: TCGameHistoryEvent[]) => void;
+
+}
+
+type ServerToClientEvents =
+    ResolvableServerToClientEvents &
+    PassThroughServerToClientEvents;
+
 
 interface ServerToServerEvents {}
 
@@ -76,6 +89,8 @@ export type {
     IOServer,
     IOServerSocket,
     MiddlewareNext,
+    PassThroughServerToClientEvents,
+    ResolvableServerToClientEvents,
     ServerToClientEvents,
     ServerToServerEvents,
     SocketData,

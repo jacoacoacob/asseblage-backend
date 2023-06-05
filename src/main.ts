@@ -41,7 +41,9 @@ import { pruneSessions } from "./session-pruner";
     // if clients disconnected while the server was down,
     // invoking `pruneSessions` should expire their session
     // entries in redis
-    pruneSessions(io);
+    setTimeout(() => {
+        pruneSessions(io);
+    }, 10000);
     
     httpServer.listen(PORT, () => {
         console.log("Server listening on port:", PORT);

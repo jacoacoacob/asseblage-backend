@@ -28,7 +28,8 @@ function makeConnectionHandler(io: IOServer) {
         resolveAndSend(
             context,
             ["to_sender", "game:meta"],
-            ["to_sender", "game:history"],
+            ["to_sender", "game_history:events"],
+            ["to_sender", "game_history:updated"],
             ["to_sender", "game:links"],
             ["to_sender", "game:players"],
             ["to_sender", "session:client_id"],

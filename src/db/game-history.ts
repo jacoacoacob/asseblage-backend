@@ -8,6 +8,7 @@ interface TCGameHistoryEvent {
 interface TRGameHistory {
     game_id: string;
     events: TCGameHistoryEvent[];
+    updated: string;
 }
 
 async function dbCreateGameHistory(gameId: string) {
@@ -20,13 +21,25 @@ async function dbCreateGameHistory(gameId: string) {
     return rows[0] as TRGameHistory | undefined;
 }
 
-async function dbListGameHistoryEvents(gameId: string) {
-    const { rows } = await pool.query(
-        "SELECT * FROM game_history WHERE game_id = $1",
-        [gameId]
+async function dbGetGameHistory(gameId: string) {
+    const { rows } = await pool.query(`
+        SELECT *
+          FROM game_history
+         WHERE game_id = $1
+        `, [gameId]
     );
 
-    return (rows[0] as TRGameHistory).events ?? [];
+    return rows[0] as TRGameHistory | undefined;
+}
+
+async function dbGetGameHistoryUpdated(gameId: string) {
+    const { rows } = await pool.query(`
+        SELECT updated
+          FROM game_history
+         WHERE game_id = $1
+    `, [gameId]);
+
+    return rows[0] as string | undefined;
 }
 
 async function dbUpdateGameHistory(gameId: string, events: TCGameHistoryEvent[]) {
@@ -37,5 +50,5 @@ async function dbUpdateGameHistory(gameId: string, events: TCGameHistoryEvent[])
     `, [events, gameId]);  
 }
 
-export { dbCreateGameHistory, dbListGameHistoryEvents, dbUpdateGameHistory };
+export { dbCreateGameHistory, dbGetGameHistory, dbGetGameHistoryUpdated, dbUpdateGameHistory };
 export type { TRGameHistory, TCGameHistoryEvent };

@@ -1,9 +1,7 @@
 import type { IOServer, IOServerSocket, MiddlewareNext } from "./types";
-import { addSessionPlayer, getSession, updateSessionMeta } from "../session-store";
+import { getSession, updateSessionMeta } from "../session-store";
 import { dbCreateGameClient, dbGetGameClient } from "../db/game-client";
 import { dbGetGameLink } from "../db/game-link";
-import { ServerSession } from "../session-store/types";
-import { redisClient } from "../redis-client";
 import { persistSession } from "../session-store/session";
 
 interface AuthPayload {

@@ -1,17 +1,17 @@
-import { dbListGameHistoryEvents } from "../db/game-history";
+import { dbGetGameHistory, dbGetGameHistoryUpdated } from "../db/game-history";
 import { dbGetGame } from "../db/game-meta";
 import { dbListGamePlayers } from "../db/game-player";
 import { listSessions } from "../session-store";
-import type { IOContext, ServerToClientEvents } from "../io/types";
+import type { IOContext, ResolvableServerToClientEvents  } from "../io/types";
 import { dbListGameLinks } from "../db/game-link";
 
 type ArgsType<T> = T extends (...args: infer U) => any ? U : never;
 
-type Resolver<Event extends keyof ServerToClientEvents> = () =>
-    Promise<ArgsType<ServerToClientEvents[Event]>[number]>;
+type Resolver<Event extends keyof ResolvableServerToClientEvents> = () =>
+    Promise<ArgsType<ResolvableServerToClientEvents[Event]>[number]>;
 
 type ResolverMap = {
-    [EventType in keyof ServerToClientEvents]: Resolver<EventType>;
+    [EventType in keyof ResolvableServerToClientEvents]: Resolver<EventType>;
 }
 
 let resolvers: ResolverMap;
@@ -31,8 +31,16 @@ function registerResolvers({ socket }: IOContext) {
     };
 
     resolvers = {
-        "game:history": async () => {
-            return await dbListGameHistoryEvents(session.gameId);
+        "game_history:events": async () => {
+            const history = await dbGetGameHistory(session.gameId);
+            if (history) {
+                return history.events;
+            }
+            return [];
+        },
+        "game_history:updated": async () => {
+            const updated = await dbGetGameHistoryUpdated(session.gameId);
+            return  updated ?? "";
         },
         "game:meta": async () => {
             const { gameId } = session;
@@ -63,7 +71,7 @@ function registerResolvers({ socket }: IOContext) {
     };
 }
 
-async function resolve<Entity extends keyof ServerToClientEvents>(entity: Entity) {
+async function resolve<Entity extends keyof ResolvableServerToClientEvents>(entity: Entity) {
     if (typeof resolvers === "undefined") {
         throw new Error("[resolve] Resolvers not registered!");
     }
@@ -78,7 +86,7 @@ type Destination =
 
 async function resolveAndSend(
     context: IOContext,
-    ...entityList: [Destination, keyof ServerToClientEvents][]
+    ...entityList: [Destination, keyof ResolvableServerToClientEvents][]
 ) {
     if (typeof resolvers === "undefined") {
         console.warn("[resolveAndSend] Resolvers not registered!");

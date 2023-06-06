@@ -1,4 +1,4 @@
-import { dbCreateGamePlayer, dbDeleteGamePlayer, dbUpdateGamePlayerDisplayName } from "../db/game-player";
+import { dbCreateGamePlayer, dbDeleteGamePlayer, dbGetGamePlayer, dbUpdateGamePlayerDisplayName } from "../db/game-player";
 import { assertAuthenticated } from "../io/assert-authenticated";
 import { IOContext } from "../io/types";
 import {  addSessionPlayer, removeSessionPlayers, listSessions } from "../session-store";
@@ -43,9 +43,24 @@ function registerGameEventHandlers(context: IOContext) {
     });
 
     socket.on("game:update_player_name", async ({ playerId, name }, acknowledge) => {
-        const { gameId, role } = assertAuthenticated(socket);
+        const { clientId, role } = assertAuthenticated(socket);
 
-        if (role === "guest") {
+        const canEditOrDelete = await (async () => {
+            if (role === "owner") {
+                return true;
+            }
+
+            const player = await dbGetGamePlayer(playerId);
+
+            if (!player) {
+                return false;
+            }
+
+            return player.created_by === clientId;
+        })();
+    
+
+        if (!canEditOrDelete) {
             acknowledge({ success: false, message: "Unauthorized" });
             return;
         }

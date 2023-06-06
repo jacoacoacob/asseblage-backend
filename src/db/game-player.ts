@@ -10,6 +10,16 @@ interface TRGamePlayer {
     updated: string;
 }
 
+async function dbGetGamePlayer(playerId: string) {
+    const { rows } = await pool.query(`
+        SELECT *
+          FROM game_player
+         WHERE id = $1
+    `, [playerId]);
+
+    return rows[0] as TRGamePlayer | undefined;
+}
+
 async function dbListGamePlayers(gameId: string) {
     const sql = `
         SELECT *
@@ -51,5 +61,11 @@ async function dbDeleteGamePlayer(playerId: string) {
     await pool.query("DELETE FROM game_player WHERE id = $1", [playerId]);
 }
 
-export { dbCreateGamePlayer, dbUpdateGamePlayerDisplayName, dbListGamePlayers, dbDeleteGamePlayer };
+export {
+    dbCreateGamePlayer,
+    dbUpdateGamePlayerDisplayName,
+    dbGetGamePlayer,
+    dbListGamePlayers,
+    dbDeleteGamePlayer
+};
 export { TRGamePlayer };

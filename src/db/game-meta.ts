@@ -20,14 +20,21 @@ async function dbCreateGame() {
     return rows[0] as TRGame;
 }
 
+async function dbUpdateGameMetaPhase(gameId: string, phase: TRGame["phase"]) {
+    await pool.query(`
+        UPDATE game
+           SET phase = $1
+         WHERE id = $2
+    `, [phase, gameId]);
+}
+
 async function dbUpdateGameDisplayName(gameId: string, displayName: string) {
     await pool.query(`
         UPDATE game
            SET display_name = $1
          WHERE id = $2
     `, [displayName, gameId]);
-    
 }
 
-export { dbCreateGame, dbGetGame, dbUpdateGameDisplayName };
+export { dbCreateGame, dbGetGame, dbUpdateGameDisplayName, dbUpdateGameMetaPhase };
 export type { TRGame };

@@ -31,8 +31,6 @@ async function addSessionPlayer(params: AddSessionPlayersParams) {
                 
                 const filteredKeys = keys.filter((key) => key !== sessionPlayersKey);
 
-                console.log("[addSessionPlayer]", { keys, filteredKeys })
-
                 // all operations in the transation will fail if any watched keys
                 // are modified during the transaction 
                 if (filteredKeys.length > 0) {

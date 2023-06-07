@@ -6,6 +6,7 @@ import { registerSessionEventHandlers } from "../events/session-event-handlers";
 import type { IOContext, IOServer, IOServerSocket } from "./types";
 import { registerResolvers, resolveAndSend } from "../events/composed";
 import { registerGameMetaEventHandlers } from "../events/game-meta-handlers";
+import { registerGameHistoryHandlers } from "../events/game-history-handlers";
 
 
 function makeConnectionHandler(io: IOServer) {
@@ -40,6 +41,7 @@ function makeConnectionHandler(io: IOServer) {
         registerSessionEventHandlers(context);
         registerGameEventHandlers(context);
         registerGameMetaEventHandlers(context);
+        registerGameHistoryHandlers(context);
 
         socket.on("disconnect", createDisconnectHandler(io, socket));
     }

@@ -44,11 +44,8 @@ interface ResolvableServerToClientEvents {
     "game_history:updated": (data: string) => void;
 }
 
-
-
 interface PassThroughServerToClientEvents {
     "game_history:events:append": (data: TCGameHistoryEvent[]) => void;
-
 }
 
 type ServerToClientEvents =

@@ -4,6 +4,23 @@ import { IOContext } from "../io/types";
 import {  addSessionPlayer, removeSessionPlayers, listSessions } from "../session-store";
 import { resolveAndSend } from "./composed";
 import { errorCodeKind, isDatabaseError } from "../db/utils";
+import type { ServerSession } from "../session-store/types";
+
+async function getCanEditOrDeletePlayer(session: ServerSession, playerId: string) {
+    const { role, clientId } = session;
+    
+    if (role === "owner") {
+        return true;
+    }
+
+    const player = await dbGetGamePlayer(playerId);
+
+    if (!player) {
+        return false;
+    }
+
+    return player.created_by === clientId;
+}
 
 function registerGameEventHandlers(context: IOContext) {
     const { socket } = context;
@@ -43,23 +60,10 @@ function registerGameEventHandlers(context: IOContext) {
     });
 
     socket.on("game:update_player_name", async ({ playerId, name }, acknowledge) => {
-        const { clientId, role } = assertAuthenticated(socket);
+        const session = assertAuthenticated(socket);
 
-        const canEditOrDelete = await (async () => {
-            if (role === "owner") {
-                return true;
-            }
-
-            const player = await dbGetGamePlayer(playerId);
-
-            if (!player) {
-                return false;
-            }
-
-            return player.created_by === clientId;
-        })();
+        const canEditOrDelete = await getCanEditOrDeletePlayer(session, playerId);
     
-
         if (!canEditOrDelete) {
             acknowledge({ success: false, message: "Unauthorized" });
             return;
@@ -90,9 +94,13 @@ function registerGameEventHandlers(context: IOContext) {
     });
 
     socket.on("game:remove_player", async ({ playerId }, acknowledge) => {
-        const { gameId, role } = assertAuthenticated(socket);
+        const session = assertAuthenticated(socket);
 
-        if (role === "guest") {
+        const { gameId } = session;
+
+        const canEditOrDelete = await getCanEditOrDeletePlayer(session, playerId);
+
+        if (!canEditOrDelete) {
             acknowledge({ success: false, message: "Unauthorized" });
             return;
         }

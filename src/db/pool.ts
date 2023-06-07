@@ -7,7 +7,7 @@ pool.on("connect", () => {
 });
 
 pool.on("error", (err) => {
-    console.log("[pool] onError", err);
+    console.warn("[pool] onError", err);
 });
 
 export { pool };

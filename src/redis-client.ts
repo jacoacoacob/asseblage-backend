@@ -9,7 +9,7 @@ const redisClient = createClient({
         reconnectStrategy: 1000,
     }
 }).on("error", (error) => {
-    console.log("[redisClient] error", error);
+    console.warn("[redisClient] error", error);
 }).on("connect", () => {
     console.log("[redisClient] connect");
 }).on("ready", () => {
@@ -21,7 +21,7 @@ const redisClient = createClient({
 redisClient
     .connect()
     .catch((error) => {
-        console.error("[redisClient] connect error", new Date().toJSON(), error);
+        console.warn("[redisClient] connect error", new Date().toJSON(), error);
     });
 
 redisClient.configSet("notify-keyspace-events", "Ex");

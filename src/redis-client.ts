@@ -1,7 +1,7 @@
 import { createClient } from "redis";
 
 import type { IOContext } from "./io/types";
-import { resolveAndSend } from "./events/composed";
+import { resolveAndSend } from "./io/handlers/composed";
 
 const redisClient = createClient({
     url: process.env.REDIS_URL,

@@ -1,9 +1,9 @@
-import { dbGetGameHistory, dbGetGameHistoryUpdated } from "../db/game-history";
-import { dbGetGame } from "../db/game-meta";
-import { dbListGamePlayers } from "../db/game-player";
-import { listSessions } from "../session-store";
-import type { IOContext, ResolvableServerToClientEvents  } from "../io/types";
-import { dbListGameLinks } from "../db/game-link";
+import { dbGetGameHistory, dbGetGameHistoryUpdated } from "../../db/game-history";
+import { dbGetGame } from "../../db/game-meta";
+import { dbListGamePlayers } from "../../db/game-player";
+import { listSessions } from "../../session-store";
+import type { IOContext, ResolvableServerToClientEvents, ServerToClientEvents  } from "../types";
+import { dbListGameLinks } from "../../db/game-link";
 
 type ArgsType<T> = T extends (...args: infer U) => any ? U : never;
 
@@ -71,7 +71,7 @@ function registerResolvers({ socket }: IOContext) {
     };
 }
 
-async function resolve<Entity extends keyof ResolvableServerToClientEvents>(entity: Entity) {
+async function resolveEntity<Entity extends keyof ResolvableServerToClientEvents>(entity: Entity) {
     if (typeof resolvers === "undefined") {
         throw new Error("[resolve] Resolvers not registered!");
     }
@@ -92,28 +92,43 @@ async function resolveAndSend(
         console.warn("[resolveAndSend] Resolvers not registered!");
         return;
     }
-
-    const { socket, io, gameRoom } = context;
     
     const resolved = await Promise.all(
         entityList.map(async ([dest, entity]) => ({
             dest,
             entity,
-            data: await resolve(entity)
+            data: await resolveEntity(entity)
         }))
     );
 
+    const send = createSender(context);
+
     resolved.forEach(({ dest, entity, data }) => {
-        if (dest === "to_sender") {
-            socket.emit(entity, data as any);
-        }
-        if (dest === "to_all") {
-            io.in(gameRoom).emit(entity, data as any);
-        }
-        if (dest === "to_all_except_sender") {
-            socket.to(gameRoom).emit(entity, data as any);
-        }
+        send(dest, entity, data);
     });
 }
 
-export { resolve, resolveAndSend, registerResolvers };
+function createSender(context: IOContext) {
+    return <
+        Event extends keyof ServerToClientEvents,
+        Data extends ArgsType<ServerToClientEvents[Event]>[number]
+    >(
+        dest: Destination,
+        event: Event,
+        data: Data
+    ) => {
+        const { socket, io, gameRoom } = context;
+        switch (dest) {
+            case "to_sender":
+                return (socket as any).emit(event, data);
+            case "to_all":
+                return (io.in(gameRoom) as any).emit(event, data);
+            case "to_all_except_sender":
+                return (socket.to(gameRoom) as any).emit(event, data);
+            default:
+                return;
+        }
+    }
+}
+
+export { resolveEntity, createSender, resolveAndSend, registerResolvers };

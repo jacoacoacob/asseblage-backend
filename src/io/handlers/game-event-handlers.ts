@@ -1,10 +1,10 @@
-import { dbCreateGamePlayer, dbDeleteGamePlayer, dbGetGamePlayer, dbUpdateGamePlayerDisplayName } from "../db/game-player";
-import { assertAuthenticated } from "../io/assert-authenticated";
-import { IOContext } from "../io/types";
-import {  addSessionPlayer, removeSessionPlayers, listSessions } from "../session-store";
+import { dbCreateGamePlayer, dbDeleteGamePlayer, dbGetGamePlayer, dbUpdateGamePlayerDisplayName } from "../../db/game-player";
+import { assertAuthenticated } from "../assert-authenticated";
+import { IOContext } from "../types";
+import {  addSessionPlayer, removeSessionPlayers, listSessions } from "../../session-store";
 import { resolveAndSend } from "./composed";
-import { errorCodeKind, isDatabaseError } from "../db/utils";
-import type { ServerSession } from "../session-store/types";
+import { errorCodeKind, isDatabaseError } from "../../db/utils";
+import type { ServerSession } from "../../session-store/types";
 
 async function getCanEditOrDeletePlayer(session: ServerSession, playerId: string) {
     const { role, clientId } = session;

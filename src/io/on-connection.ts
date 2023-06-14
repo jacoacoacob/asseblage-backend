@@ -1,12 +1,12 @@
 
 import { makeSessionExpiredHandler } from "../redis-client";
-import { registerGameEventHandlers } from "../events/game-event-handlers";
+import { registerGameEventHandlers } from "./handlers/game-event-handlers";
 import { createDisconnectHandler } from "./on-disconnect";
-import { registerSessionEventHandlers } from "../events/session-event-handlers";
+import { registerSessionEventHandlers } from "./handlers/session-event-handlers";
 import type { IOContext, IOServer, IOServerSocket } from "./types";
-import { registerResolvers, resolveAndSend } from "../events/composed";
-import { registerGameMetaEventHandlers } from "../events/game-meta-handlers";
-import { registerGameHistoryHandlers } from "../events/game-history-handlers";
+import { registerResolvers, resolveAndSend } from "./handlers/composed";
+import { registerGameMetaEventHandlers } from "./handlers/game-meta-handlers";
+import { registerGameHistoryHandlers } from "./handlers/game-history-handlers";
 
 
 function makeConnectionHandler(io: IOServer) {

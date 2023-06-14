@@ -1,7 +1,7 @@
-import { dbUpdateClientDisplayName } from "../db/game-client";
-import { assertAuthenticated } from "../io/assert-authenticated";
-import { IOContext } from "../io/types";
-import { updateSessionMeta, addSessionPlayer, removeSessionPlayers } from "../session-store";
+import { dbUpdateClientDisplayName } from "../../db/game-client";
+import { assertAuthenticated } from "../assert-authenticated";
+import { IOContext } from "../types";
+import { updateSessionMeta, addSessionPlayer, removeSessionPlayers } from "../../session-store";
 import { resolveAndSend } from "./composed";
 
 function registerSessionEventHandlers(context: IOContext) {

@@ -7,6 +7,7 @@ import { TRGame } from "../db/game-meta";
 import { TRGamePlayer } from "../db/game-player";
 import type { TCGameHistoryEvent } from "../db/game-history";
 import { TRGameLink } from "../db/game-link";
+import { GameHistoryEvent } from "./handlers/game-history-handlers";
 
 type MiddlewareNext = (err?: ExtendedError) => void;
 
@@ -23,8 +24,8 @@ type EmitWithAck<Data = {}> = (data: Data, ack: Ack<true>) => void;
 type ReceiveWithAck<Data = {}> = (data: Data, ack: Ack) => void;
 
 interface C2SGameHistoryEvent {
-    type: string;
-    data: unknown;
+    type: keyof GameHistoryEvent;
+    data: any;
     playerId: string;
 }
 
@@ -46,12 +47,12 @@ interface ResolvableServerToClientEvents {
     "game:meta": (data: Pick<TRGame, "display_name" | "id" | "phase">) => void;
     "game:links": (data: TRGameLink[]) => void;
     "game:players": (data: TRGamePlayer[]) => void;
-    "game_history:events": (data: TCGameHistoryEvent[]) => void;
+    "game_history:events": (data: TCGameHistoryEvent<keyof GameHistoryEvent>[]) => void;
     "game_history:updated": (data: string) => void;
 }
 
 interface PassThroughServerToClientEvents {
-    "game_history:events:append": (data: TCGameHistoryEvent[]) => void;
+    "game_history:events:append": (data: TCGameHistoryEvent<keyof GameHistoryEvent>[]) => void;
 }
 
 type ServerToClientEvents =

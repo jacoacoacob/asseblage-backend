@@ -1,7 +1,32 @@
-import { dbUpdateGameHistory } from "../../db/game-history";
+import { TCGameHistoryEvent, dbUpdateGameHistory } from "../../db/game-history";
 import { assertAuthenticated } from "../assert-authenticated";
 import type { IOContext } from "../types";
 import { createSender } from "./composed";
+
+interface GameHistoryEvent {
+    "start_game:tiles": [number, number];
+    "start_game:players": { playerId: string; tileIndex: number }[];
+}
+
+interface CreateEvent<Type extends keyof GameHistoryEvent> {
+    type: Type;
+    data: GameHistoryEvent[Type];
+    playerId?: string;
+    clientId?: string;
+}
+
+function createGameHistoryEvent<Type extends keyof GameHistoryEvent>(options: CreateEvent<Type>): TCGameHistoryEvent<Type> {
+    const { type, data, playerId, clientId } = options;
+    return {
+        type,
+        data,
+        meta: [
+            clientId ?? null,
+            playerId ?? null,
+            Date.now()
+        ],
+    }
+}
 
 function registerGameHistoryHandlers(context: IOContext) {
     const { socket } = context;
@@ -15,14 +40,11 @@ function registerGameHistoryHandlers(context: IOContext) {
         try {
             const appendedEvents = await dbUpdateGameHistory(
                 gameId,
-                events.map(({ playerId, type, data }) => ({
+                events.map(({ type, data, playerId}) => createGameHistoryEvent({
                     type,
                     data,
-                    meta: {
-                        playerId,
-                        clientId,
-                        serverTimestamp: Date.now(),
-                    },
+                    clientId,
+                    playerId,
                 }))
             );
 
@@ -36,4 +58,5 @@ function registerGameHistoryHandlers(context: IOContext) {
     });
 }
 
-export { registerGameHistoryHandlers };
+export { registerGameHistoryHandlers, createGameHistoryEvent };
+export type { GameHistoryEvent };
